@@ -1,0 +1,2963 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NeoGuard : Banc d'essai</title>
+<style>
+:root{
+  --bg:#FFF8F0; --surface:#FFFFFF; --text:#2B2F42; --muted:#5E6378; --line:#EADFD3;
+  --primary:#2F6FB0; --ok:#1E8A5E; --warn:#B26A00; --danger:#C0392B; --legere:#6B4FC8;
+  --ok-bg:#E3F5EC; --warn-bg:#FFF1D6; --danger-bg:#FDE4E1; --legere-bg:#ECE6FB;
+  --radius:16px; --shadow:0 2px 10px rgba(60,50,40,.08);
+  --font-body:"Nunito",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --font-display:"Fredoka","Nunito",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:16px;line-height:1.45}
+h1,h2,h3{font-family:var(--font-display);margin:0 0 .5rem;font-weight:600}
+h2{font-size:1.1rem} h3{font-size:1rem}
+.muted{color:var(--muted)} .small{font-size:.85rem}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#app-header{display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center;padding:.7rem 1rem;background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+#app-header .brand{font-family:var(--font-display);font-size:1.25rem;color:var(--primary)}
+#baby-name{font-family:var(--font-display);font-size:1.2rem}
+.pill{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .7rem;border-radius:999px;background:var(--bg);border:1px solid var(--line);font-size:.9rem}
+#patch-status .dot{width:.7rem;height:.7rem;border-radius:50%;background:var(--ok)}
+#patch-status[data-state="disconnected"] .dot{background:var(--danger)}
+#patch-status[data-state="connected"] .dot{animation:blink 1.4s infinite}
+#patch-status[data-state="disconnected"] .dot{animation:blink .7s infinite}
+@keyframes blink{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){#patch-status .dot{animation:none!important}}
+#demo-banner{background:#2B2F42;color:#fff;padding:.55rem 1rem;display:flex;flex-wrap:wrap;gap:.3rem 1rem;align-items:center;justify-content:space-between;font-weight:700}
+#demo-banner .counter{font-weight:600;font-size:.85rem;background:rgba(255,255,255,.15);padding:.15rem .6rem;border-radius:999px}
+#demo-banner .counter.bad{background:var(--danger)}
+main{display:grid;gap:1rem;padding:1rem;max-width:1180px;margin:0 auto;grid-template-columns:1fr}
+@media(min-width:900px){main{grid-template-columns:minmax(0,1.5fr) minmax(300px,1fr);align-items:start}}
+.col{display:grid;gap:1rem;min-width:0}
+.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:1rem;min-width:0}
+.btn{min-height:48px;padding:.5rem 1rem;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:inherit;font-weight:700;cursor:pointer}
+.btn:hover{border-color:var(--primary)} .btn:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+.btn-primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn-danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn-ghost{background:transparent}
+.btn-sm{min-height:36px;padding:.2rem .7rem;font-size:.85rem}
+/* état de risque */
+#risk-badge{display:inline-block;padding:.35rem 1rem;border-radius:999px;font-family:var(--font-display);font-size:1.3rem;background:var(--ok-bg);color:var(--ok)}
+#risk-badge[data-level="vigilance"]{background:var(--warn-bg);color:var(--warn)}
+#risk-badge[data-level="pathologie-legere"]{background:var(--legere-bg);color:var(--legere)}
+#risk-badge[data-level="urgence"]{background:var(--danger-bg);color:var(--danger)}
+.scorebar{height:10px;border-radius:99px;background:var(--line);overflow:hidden;margin:.6rem 0}
+.scorebar>i{display:block;height:100%;width:0;background:var(--ok);transition:width .4s}
+#risk-reasons{margin:.5rem 0 0;padding-left:1.2rem}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.6rem}
+.tile{background:var(--bg);border-radius:12px;padding:.6rem .8rem}
+.tile .lbl{font-size:.8rem;color:var(--muted)}
+.tile .val{font-family:var(--font-display);font-size:1.7rem;line-height:1.1}
+.tile .val small{font-size:.85rem;color:var(--muted);font-family:var(--font-body)}
+canvas{width:100%;display:block;background:#FBF6EF;border-radius:10px}
+#chart-ecg,#chart-resp{height:120px}
+.mini{height:78px}
+.legend{display:flex;flex-wrap:wrap;gap:.2rem 1rem;font-size:.85rem;margin:.3rem 0 .6rem}
+table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:.35rem .4rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:700;color:var(--muted);font-size:.8rem}
+.v-ok{color:var(--ok);font-weight:700}.v-high,.v-low{color:var(--danger);font-weight:700}
+.lvlbar{display:flex;height:16px;border-radius:99px;overflow:hidden;background:var(--line);margin:.4rem 0}
+.lvlbar i{display:block;height:100%}
+.l-normal{background:var(--ok)}.l-vigilance{background:#E6A100}.l-pathologie-legere{background:var(--legere)}.l-urgence{background:var(--danger)}
+#demo-log{list-style:none;margin:0;padding:0;max-height:300px;overflow:auto;font-size:.88rem}
+#demo-log li{padding:.35rem .5rem;border-bottom:1px solid var(--line)}
+#demo-log li.ok{border-left:4px solid var(--ok)}#demo-log li.ko{border-left:4px solid var(--danger);background:var(--danger-bg)}
+#demo-log li.alert-urgence{border-left:4px solid var(--danger)}#demo-log li.alert-vigilance,#demo-log li.alert-pathologie-legere{border-left:4px solid #E6A100}
+#demo-log time{color:var(--muted);margin-right:.4rem}
+/* panneau de test */
+.ctrl{margin:.7rem 0}
+.ctrl label{display:flex;justify-content:space-between;gap:.5rem;font-weight:700}
+.ctrl input[type=range]{width:100%;height:32px}
+.ctrl .auto{font-weight:600;color:var(--muted);font-size:.8rem}
+.ctrl.forced .auto{color:var(--primary)}
+fieldset{border:1px solid var(--line);border-radius:12px;margin:.7rem 0;padding:.5rem .8rem}
+legend{font-weight:700;padding:0 .3rem}
+.radios{display:flex;flex-wrap:wrap;gap:.3rem .9rem}
+.radios label,.check{display:inline-flex;align-items:center;gap:.4rem;min-height:36px}
+.scen{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.5rem}
+.scen .btn{text-align:left;font-size:.9rem}
+.profile{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.profile label{display:grid;gap:.15rem;font-weight:700;font-size:.85rem}
+.profile label.check{display:flex;align-items:center;gap:.5rem}
+.profile input[type=text],.profile input[type=date]{min-height:44px;padding:.3rem .5rem;border:1px solid var(--line);border-radius:10px;font:inherit}
+#profile-msg{color:var(--danger);font-weight:700;min-height:1.2em}
+details summary{cursor:pointer;font-weight:700;min-height:36px;display:flex;align-items:center}
+/* alertes */
+#vigilance-toast,#reminder-toast{position:fixed;left:50%;transform:translateX(-50%);bottom:1rem;z-index:20;padding:.8rem 1.2rem;border-radius:14px;max-width:min(92vw,520px);box-shadow:0 6px 24px rgba(0,0,0,.25);font-weight:700;cursor:pointer}
+#vigilance-toast{background:var(--warn-bg);color:#6a4000;border:2px solid #E6A100}
+#reminder-toast{background:#E4F0FB;color:#1b4b78;border:2px solid var(--primary);bottom:5.2rem}
+#audio-warning{width:calc(100% - 2rem);margin:.6rem 1rem 0;text-align:left;border-color:var(--warn)}
+#emergency-overlay{position:fixed;inset:0;z-index:50;background:#B3261E;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:1.5rem;text-align:center;overflow:auto}
+#emergency-title{font-size:clamp(1.5rem,5vw,2.4rem);margin:0}
+#emergency-detail{font-size:1.15rem;max-width:34rem}
+#emergency-detail p{margin:.4rem 0}
+#emergency-overlay .actions{display:flex;flex-wrap:wrap;gap:.8rem;justify-content:center}
+#emergency-overlay .btn{font-size:1.1rem;min-width:220px;min-height:56px;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+#btn-ok-intervened{background:#fff;color:#7a130d;border-color:#fff}
+#btn-call-samu{background:#2B0907;color:#fff;border-color:#2B0907}
+</style>
+</head>
+<body data-mode="demo" data-theme="day">
+
+<header id="app-header">
+  <span class="brand">NeoGuard</span>
+  <span id="baby-name">—</span>
+  <span id="baby-age" class="pill">—</span>
+  <span id="patch-status" class="pill" data-state="connected" role="status"><span class="dot" aria-hidden="true"></span><span id="patch-status-label">Patch connecté</span></span>
+  <button id="btn-enable-audio" class="btn btn-ghost btn-sm" type="button" data-audio="locked">🔊 Activer le son</button>
+</header>
+
+<div id="demo-banner" role="status">
+  <span>MODE TEST : rien n'est enregistré</span>
+  <span id="write-counter" class="counter">Écritures sur l'appareil : 0</span>
+</div>
+
+<main>
+  <!-- ======================= TABLEAU DE BORD ======================= -->
+  <div class="col" id="dashboard">
+    <section class="card" aria-labelledby="h-etat">
+      <h2 id="h-etat">État actuel</h2>
+      <span id="risk-badge" data-level="normal">Tout va bien</span>
+      <span class="small muted" id="score-text"> score 0 / 100 · confiance <span id="confidence">faible</span></span>
+      <div class="scorebar" aria-hidden="true"><i id="score-fill"></i></div>
+      <ul id="risk-reasons" aria-live="polite"></ul>
+    </section>
+
+    <section class="card" aria-label="Mesures en direct">
+      <div class="tiles">
+        <div class="tile"><div class="lbl">Rythme cardiaque</div><div class="val"><span id="hr-value">—</span> <small>bpm</small></div></div>
+        <div class="tile"><div class="lbl">Respiration</div><div class="val"><span id="rr-value">—</span> <small>/min</small></div></div>
+        <div class="tile"><div class="lbl">Position</div><div class="val"><span id="orientation-value" data-orientation="dos">—</span></div></div>
+        <div class="tile"><div class="lbl">Sommeil</div><div class="val"><span id="sleep-value" data-sleep="inconnu">—</span></div></div>
+        <div class="tile"><div class="lbl">Âge de la partie collante</div><div class="val"><span id="patch-age">0.0</span> <small>h</small></div></div>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Graphiques en direct">
+      <h3>ECG (8 s)</h3>
+      <canvas id="chart-ecg" role="img" aria-label="Tracé ECG en direct"></canvas>
+      <h3 style="margin-top:.8rem">Respiration (8 s) <span id="pause-badge" class="pill small" hidden></span></h3>
+      <canvas id="chart-resp" role="img" aria-label="Tracé de la respiration en direct"></canvas>
+    </section>
+
+    <section class="card" aria-labelledby="h-why">
+      <h2 id="h-why">Pourquoi cet état ?</h2>
+      <div id="demo-explain"></div>
+    </section>
+
+    <section class="card" aria-labelledby="h-resume">
+      <h2 id="h-resume">Résumé de la session de test</h2>
+      <p id="session-line" class="muted small"></p>
+      <div class="legend"><span style="color:var(--primary)">━ Rythme cardiaque</span><span style="color:#1B8C84">━ Respiration</span><span style="color:var(--danger)">━ Score de risque</span><span class="muted">zone claire = plage normale</span></div>
+      <canvas id="chart-s-hr" class="mini" role="img" aria-label="Historique du rythme cardiaque de la session"></canvas>
+      <canvas id="chart-s-rr" class="mini" style="margin-top:.4rem" role="img" aria-label="Historique de la respiration de la session"></canvas>
+      <canvas id="chart-s-risk" class="mini" style="margin-top:.4rem" role="img" aria-label="Historique du score de risque de la session"></canvas>
+      <table style="margin-top:.8rem">
+        <thead><tr><th>Mesure</th><th>Minimum</th><th>Moyenne</th><th>Maximum</th></tr></thead>
+        <tbody id="stats-body"></tbody>
+      </table>
+      <h3 style="margin-top:.8rem">Temps passé par niveau</h3>
+      <div class="lvlbar" id="lvlbar" aria-hidden="true"></div>
+      <p id="lvl-text" class="small muted"></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-log">
+      <h2 id="h-log">Journal du test</h2>
+      <p class="small muted">Alertes déclenchées et résultats des scénarios (« Attendu / Obtenu »). Tout disparaît quand vous fermez la page.</p>
+      <ul id="demo-log" aria-live="polite"></ul>
+    </section>
+  </div>
+
+  <!-- ======================= PANNEAU DE TEST ======================= -->
+  <div class="col">
+    <section class="card" id="demo-panel" aria-labelledby="h-test">
+      <h2 id="h-test">Panneau de test</h2>
+      <p class="small muted">Bougez un curseur pour forcer une valeur ; « auto » la rend au simulateur. Les graphiques et l'état réagissent en direct (≈ 2 à 4 s de lissage).</p>
+
+      <div class="ctrl" id="ctrl-hr"><label for="demo-hr"><span>Rythme cardiaque</span><span><output id="out-hr">—</output> bpm <button type="button" class="btn btn-ghost btn-sm auto" data-release="hr">auto</button></span></label><input id="demo-hr" type="range" min="40" max="220" value="120"></div>
+      <div class="ctrl" id="ctrl-rr"><label for="demo-rr"><span>Respiration</span><span><output id="out-rr">—</output> /min <button type="button" class="btn btn-ghost btn-sm auto" data-release="rr">auto</button></span></label><input id="demo-rr" type="range" min="0" max="90" value="38"></div>
+      <div class="ctrl" id="ctrl-motion"><label for="demo-motion"><span>Mouvement</span><span><output id="out-motion">—</output> % <button type="button" class="btn btn-ghost btn-sm auto" data-release="motion">auto</button></span></label><input id="demo-motion" type="range" min="0" max="100" value="5"></div>
+
+      <fieldset>
+        <legend>Position du bébé</legend>
+        <div class="radios">
+          <label><input type="radio" name="demo-orientation" value="" checked> auto</label>
+          <label><input type="radio" name="demo-orientation" value="dos"> dos</label>
+          <label><input type="radio" name="demo-orientation" value="ventre"> ventre</label>
+          <label><input type="radio" name="demo-orientation" value="cote-gauche"> côté gauche</label>
+          <label><input type="radio" name="demo-orientation" value="cote-droit"> côté droit</label>
+        </div>
+      </fieldset>
+
+      <label class="check"><input id="demo-patch-connected" type="checkbox" checked> Patch connecté</label><br>
+      <label class="check"><input id="demo-arrhythmia" type="checkbox"> Battements irréguliers (ECG)</label>
+      <div class="ctrl"><label for="demo-patch-hours"><span>Âge de la partie collante</span><span><output id="out-patch">0</output> h</span></label><input id="demo-patch-hours" type="range" min="0" max="30" step="0.5" value="0"></div>
+      <button id="btn-patch-changed" class="btn btn-sm" type="button">J'ai changé la partie collante</button>
+
+      <h3 style="margin-top:1rem">Scénarios</h3>
+      <div class="scen">
+        <button class="btn" type="button" data-scenario="normal">✅ Normal</button>
+        <button class="btn" type="button" data-scenario="sommeil-agite">😴 Sommeil agité</button>
+        <button class="btn" type="button" data-scenario="vigilance-tachycardie">💓 Tachycardie (vigilance)</button>
+        <button class="btn" type="button" data-scenario="vigilance-respiration-rapide">🌬 Respiration rapide (vigilance)</button>
+        <button class="btn" type="button" data-scenario="apnee-urgence">🛑 Apnée 25 s (urgence)</button>
+        <button class="btn" type="button" data-scenario="bradycardie-urgence">🐢 Bradycardie (urgence)</button>
+        <button class="btn" type="button" data-scenario="ventre-urgence">🔄 Sur le ventre (urgence)</button>
+        <button class="btn" type="button" data-scenario="patch-deconnecte">📡 Patch déconnecté (≈ 60 s)</button>
+        <button class="btn" type="button" data-scenario="rappel-24h">⏰ Rappel 24 h</button>
+      </div>
+      <p style="margin-top:.8rem"><button id="demo-reset" class="btn btn-primary" type="button">Tout remettre à normal</button></p>
+    </section>
+
+    <section class="card" aria-labelledby="h-prof">
+      <h2 id="h-prof">Bébé de test</h2>
+      <form id="profile-form" class="profile" novalidate>
+        <label>Prénom<input id="baby-firstname" type="text" value="Léa" autocomplete="off"></label>
+        <label>Date de naissance<input id="baby-birthdate" type="date"></label>
+        <label class="check" style="grid-column:1/-1"><input id="risk-pregnancy" type="checkbox"> Profil à risque (grossesse à risques / antécédents)</label>
+        <div style="grid-column:1/-1"><span id="age-line" class="small muted"></span></div>
+        <div style="grid-column:1/-1"><button id="profile-save" class="btn" type="submit">Appliquer et relancer le test</button></div>
+        <div id="profile-msg" style="grid-column:1/-1" role="alert"></div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Réglages d'alerte</h2>
+      <label class="check"><input id="setting-sound" type="checkbox" checked> Son</label><br>
+      <label class="check"><input id="setting-vibration" type="checkbox" checked> Vibration</label><br>
+      <label class="check"><input id="setting-notifications" type="checkbox"> Notifications [TEST] du navigateur</label>
+      <p class="small muted">En mode test, « Appeler SAMU » ne compose jamais le numéro.</p>
+    </section>
+
+    <section class="card">
+      <details>
+        <summary>Aide à la surveillance, à lire!</summary>
+        <p class="small muted">NeoGuard est une aide à la surveillance : il ne remplace ni la surveillance des parents ni un dispositif médical certifié. Les seuils sont des valeurs de départ à faire valider par un pédiatre. Toutes les données ici sont simulées.</p>
+      </details>
+    </section>
+  </div>
+</main>
+
+<div id="vigilance-toast" hidden><span class="toast-text"></span></div>
+<div id="reminder-toast" hidden><span class="toast-text"></span></div>
+
+<div id="emergency-overlay" role="alertdialog" aria-modal="true" aria-labelledby="emergency-title" aria-describedby="emergency-detail" hidden>
+  <h2 id="emergency-title">URGENCE</h2>
+  <div id="emergency-detail"></div>
+  <div class="actions">
+    <button id="btn-ok-intervened" class="btn" type="button">Ça va, j'ai intervenu</button>
+    <a id="btn-call-samu" class="btn" href="tel:190">Appeler SAMU (190)</a>
+  </div>
+</div>
+
+<script>(function(){"use strict";
+const __m = {};
+__m.state = (function(){
+/**
+ * NeoGuard — js/state.js
+ * ---------------------------------------------------------------------------
+ * Store minimal (sans bibliothèque) + gestion de l'isolation mode live / demo.
+ *
+ * Règles importantes :
+ *  - Aucune variable globale : tout vit dans ce module (portée de module ES).
+ *  - setMode("demo") fige un instantané de l'état réel, vide l'état transitoire
+ *    et active l'isolation : isWriteBlocked() renvoie true (db.js DOIT le
+ *    consulter avant toute écriture IndexedDB / localStorage).
+ *  - setMode("live") restaure l'état réel et efface TOUT l'état de démo.
+ *
+ * Aide à la surveillance — ce module ne produit aucun avis médical.
+ */
+
+/** Réglages par défaut (copiés, jamais partagés par référence). */
+const DEFAULT_SETTINGS = Object.freeze({
+  sound: true,
+  vibration: true,
+  notifications: false,
+  emergencyNumber: '190',
+  theme: 'day', // "day" | "night"
+});
+
+/** Clés de l'état « transitoire » : vidées à l'entrée de la démo. */
+const TRANSIENT_KEYS = ['latestFrame', 'latestAssessment', 'alertActive'];
+
+/**
+ * @typedef {Object} AppState
+ * @property {"live"|"demo"} mode
+ * @property {Object|null} profile        Profil du bébé (prénom, naissance, sexe, risques…)
+ * @property {Object|null} latestFrame    Dernière frame capteur (contrat de données)
+ * @property {Object|null} latestAssessment Dernier résultat de l'IA
+ * @property {Object} settings            Réglages utilisateur
+ * @property {number|null} patchAppliedAt Époque (ms) de pose de la partie collante
+ * @property {boolean} alertActive        Une alerte d'urgence est-elle affichée ?
+ */
+
+/** @returns {AppState} */
+function createInitialState() {
+  return {
+    mode: 'live',
+    profile: null,
+    latestFrame: null,
+    latestAssessment: null,
+    settings: { ...DEFAULT_SETTINGS },
+    patchAppliedAt: null,
+    alertActive: false,
+  };
+}
+
+/** État courant (privé au module). */
+let state = createInitialState();
+
+/** Abonnés : fonctions appelées à chaque changement. */
+const listeners = new Set();
+
+/** Instantané de l'état réel, conservé pendant la démo (sinon null). */
+let liveSnapshot = null;
+
+/** Copie profonde simple (les états sont des données JSON-compatibles). */
+function clone(value) {
+  if (value === null || typeof value !== 'object') return value;
+  if (typeof structuredClone === 'function') return structuredClone(value);
+  return JSON.parse(JSON.stringify(value));
+}
+
+/**
+ * Retourne l'état courant (copie superficielle : modifier l'objet renvoyé
+ * n'altère pas le store ; passer par setState).
+ * @returns {AppState}
+ */
+function getState() {
+  return { ...state };
+}
+
+/**
+ * Fusionne un patch dans l'état puis notifie les abonnés.
+ * `settings` est fusionné champ par champ (pas écrasé en bloc).
+ * Une exception dans un abonné n'empêche jamais les autres d'être notifiés.
+ * @param {Partial<AppState>} patch
+ * @returns {AppState} le nouvel état
+ */
+function setState(patch) {
+  if (!patch || typeof patch !== 'object') return getState();
+  const prev = state;
+  const next = { ...prev, ...patch };
+  if (patch.settings && typeof patch.settings === 'object') {
+    next.settings = { ...prev.settings, ...patch.settings };
+  }
+  state = next;
+  notify(prev, patch);
+  return getState();
+}
+
+/**
+ * S'abonne aux changements.
+ * @param {(state: AppState, prev: AppState, patch: Object) => void} fn
+ * @returns {() => void} fonction de désabonnement
+ */
+function subscribe(fn) {
+  if (typeof fn !== 'function') return () => {};
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+/** Notifie tous les abonnés en isolant leurs erreurs. */
+function notify(prev, patch) {
+  const current = getState();
+  for (const fn of Array.from(listeners)) {
+    try {
+      fn(current, { ...prev }, patch);
+    } catch (err) {
+      console.error('[NeoGuard/state] erreur dans un abonné :', err);
+    }
+  }
+}
+
+/**
+ * Indique si le mode démo est actif.
+ * @returns {boolean}
+ */
+function isDemo() {
+  return state.mode === 'demo';
+}
+
+/**
+ * Garde d'isolation à consulter par db.js AVANT toute écriture
+ * (IndexedDB, localStorage…). En démo : true => écriture interdite.
+ * @returns {boolean}
+ */
+function isWriteBlocked() {
+  return state.mode === 'demo';
+}
+
+/**
+ * Change de mode.
+ *  - "demo" : mémorise l'état réel, vide l'état transitoire (frame, évaluation,
+ *    alerte), garde profil et réglages en lecture pour calculer les seuils par
+ *    âge. Rien n'est écrit en base (voir isWriteBlocked()).
+ *  - "live" : restaure l'état réel mémorisé et efface TOUT l'état de démo
+ *    (patchAppliedAt de test, frames de test, alerte de test…).
+ * Met à jour <body data-mode="…">.
+ * @param {"live"|"demo"} mode
+ * @returns {AppState}
+ */
+function setMode(mode) {
+  if (mode !== 'live' && mode !== 'demo') {
+    throw new RangeError(`Mode inconnu : ${mode}`);
+  }
+  if (mode === state.mode) return getState();
+
+  const prev = state;
+  let next;
+
+  if (mode === 'demo') {
+    // Instantané de l'état réel (sans les réglages, inchangés par la démo).
+    liveSnapshot = clone({
+      profile: prev.profile,
+      latestFrame: prev.latestFrame,
+      latestAssessment: prev.latestAssessment,
+      patchAppliedAt: prev.patchAppliedAt,
+      alertActive: prev.alertActive,
+    });
+    next = { ...prev, mode: 'demo' };
+    for (const key of TRANSIENT_KEYS) next[key] = key === 'alertActive' ? false : null;
+    // Pose du patch fictive : la démo pilote sa propre valeur (#demo-patch-hours).
+    next.patchAppliedAt = Date.now();
+  } else {
+    const snap = liveSnapshot || {};
+    next = {
+      ...prev,
+      mode: 'live',
+      profile: snap.profile ?? prev.profile,
+      latestFrame: snap.latestFrame ?? null,
+      latestAssessment: snap.latestAssessment ?? null,
+      patchAppliedAt: snap.patchAppliedAt ?? null,
+      alertActive: false,
+    };
+    liveSnapshot = null; // plus aucune trace de la démo
+  }
+
+  state = next;
+  if (typeof document !== 'undefined' && document.body) {
+    document.body.setAttribute('data-mode', mode);
+  }
+  notify(prev, { mode });
+  return getState();
+}
+
+/**
+ * Remet le store à zéro (réinitialisation des données).
+ * @returns {AppState}
+ */
+function resetState() {
+  const prev = state;
+  liveSnapshot = null;
+  state = createInitialState();
+  if (typeof document !== 'undefined' && document.body) {
+    document.body.setAttribute('data-mode', 'live');
+  }
+  notify(prev, { reset: true });
+  return getState();
+}
+
+/**
+ * Convertit "YYYY-MM-DD" en Date locale à midi (évite les décalages de fuseau
+ * et d'heure d'été). Retourne null si le format ou la date est invalide.
+ * @param {string} iso
+ * @returns {Date|null}
+ */
+function parseISODate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const date = new Date(y, mo - 1, d, 12, 0, 0);
+  const valid =
+    date.getFullYear() === y && date.getMonth() === mo - 1 && date.getDate() === d;
+  return valid ? date : null;
+}
+
+/** Nombre de jours dans un mois (mois 0-11). */
+function daysInMonth(year, monthIndex) {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+/**
+ * Âge en mois révolus à une date donnée.
+ * Règle de fin de mois : un bébé né le 31 a « un mois » le dernier jour du mois
+ * suivant s'il compte moins de 31 jours (ex. né le 31/01 -> 1 mois le 28/02).
+ * Retourne null si la date est invalide ou dans le futur.
+ *
+ * Tests simples (valeurs attendues) :
+ *   computeAgeMonths('2026-06-10', new Date(2026, 9, 10))  // 4  (jour pour jour)
+ *   computeAgeMonths('2026-06-11', new Date(2026, 9, 10))  // 3  (le 11 n'est pas atteint)
+ *   computeAgeMonths('2026-01-31', new Date(2026, 1, 28))  // 1  (fin de mois)
+ *   computeAgeMonths('2026-01-31', new Date(2026, 1, 27))  // 0  (28 février pas encore atteint)
+ *   computeAgeMonths('2024-10-10', new Date(2026, 9, 10))  // 24
+ *   computeAgeMonths('2026-10-10', new Date(2026, 9, 10))  // 0  (né aujourd'hui)
+ *   computeAgeMonths('2027-01-01', new Date(2026, 9, 10))  // null (date future)
+ *   computeAgeMonths('abc', new Date(2026, 9, 10))         // null (invalide)
+ *
+ * @param {string} birthdateISO "YYYY-MM-DD"
+ * @param {Date} [today=new Date()]
+ * @returns {number|null}
+ */
+function computeAgeMonths(birthdateISO, today = new Date()) {
+  const birth = parseISODate(birthdateISO);
+  if (!birth || !(today instanceof Date) || Number.isNaN(today.getTime())) return null;
+
+  // Comparaison au jour près (on ignore l'heure).
+  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 12, 0, 0);
+  if (birth.getTime() > t.getTime()) return null;
+
+  let months =
+    (t.getFullYear() - birth.getFullYear()) * 12 + (t.getMonth() - birth.getMonth());
+
+  if (t.getDate() < birth.getDate()) {
+    // Le « jour anniversaire » du mois n'est pas atteint… sauf si on est au
+    // dernier jour d'un mois plus court que le jour de naissance.
+    const isLastDay = t.getDate() === daysInMonth(t.getFullYear(), t.getMonth());
+    if (!isLastDay) months -= 1;
+  }
+  return Math.max(0, months);
+}
+
+return { getState, setState, subscribe, isDemo, isWriteBlocked, setMode, resetState, computeAgeMonths };
+})();
+__m.sensors = (function(){
+/**
+ * NeoGuard — js/sensors.js
+ * ---------------------------------------------------------------------------
+ * Interface SensorSource + implémentation SimulatedSensor (sans matériel).
+ *
+ * Chaque capteur émet ~1 frame par seconde, conforme au contrat de données :
+ *   { t: epochMs, hr: bpm, ecg: number[], rr: resp/min, motion: 0..100,
+ *     orientation: "dos|ventre|cote-gauche|cote-droit",
+ *     patchConnected: boolean, patchAppliedAt: epochMs }
+ *
+ * Remarques pour les autres modules :
+ *  - Une pause respiratoire se lit dans les frames : rr = 0 et motion ≈ 0.
+ *    Sa durée est calculée par ai.js (nombre de secondes consécutives).
+ *  - Quand le patch est déconnecté, AUCUNE frame n'est émise : l'événement
+ *    "disconnected" prévient (main.js gère le délai de 60 s -> vigilance).
+ *  - Aide à la surveillance : données simulées, aucun usage médical.
+ */
+
+/** Fréquence d'échantillonnage de l'ECG synthétique (Hz). */
+const ECG_SAMPLE_RATE = 125;
+
+/** Orientations valides (identiques au contrat HTML). */
+const ORIENTATIONS = Object.freeze(['dos', 'ventre', 'cote-gauche', 'cote-droit']);
+
+/** Constante de temps du lissage : ~95 % de l'écart résorbé en 1,5 s (3 × 0,5 s). */
+const SMOOTHING_TAU_S = 0.5;
+
+/**
+ * @typedef {Object} SensorFrame
+ * @property {number} t
+ * @property {number} hr
+ * @property {number[]} ecg
+ * @property {number} rr
+ * @property {number} motion
+ * @property {string} orientation
+ * @property {boolean} patchConnected
+ * @property {number} patchAppliedAt
+ */
+
+/**
+ * @typedef {Object} SensorOverrides
+ * @property {number} [hr]              FC forcée (20-250)
+ * @property {number} [rr]              Respiration forcée (0-120)
+ * @property {number} [motion]          Mouvement forcé (0-100)
+ * @property {string} [orientation]     "dos|ventre|cote-gauche|cote-droit"
+ * @property {boolean} [patchConnected] false = patch déconnecté
+ * @property {boolean|number} [apnea]   true = pause jusqu'à annulation ;
+ *                                      nombre = durée en secondes
+ * @property {boolean} [arrhythmia]     (extra) battements irréguliers visibles à l'ECG
+ * @property {number} [patchAppliedAt]  (extra) époque de pose de la partie collante
+ * Une clé à null/undefined retire la surcharge correspondante.
+ */
+
+/**
+ * Interface commune des sources de données (simulée aujourd'hui,
+ * Bluetooth demain). Fournit aussi un petit émetteur d'événements.
+ * Événements : "frame" (SensorFrame), "connected", "disconnected" ({ t }).
+ */
+class SensorSource {
+  constructor() {
+    /** @type {Map<string, Set<Function>>} */
+    this._handlers = new Map();
+  }
+
+  /** Démarre l'émission des frames. */
+  start() { throw new Error('SensorSource.start() non implémentée'); }
+
+  /** Arrête l'émission (aucun événement émis). */
+  stop() { throw new Error('SensorSource.stop() non implémentée'); }
+
+  /**
+   * Remplace des paramètres par des valeurs de démonstration.
+   * @param {SensorOverrides|null} _overrides null = tout retirer
+   */
+  setOverrides(_overrides) { /* facultatif pour une source réelle */ }
+
+  /** @returns {boolean} le patch est-il connecté et le flux actif ? */
+  isConnected() { throw new Error('SensorSource.isConnected() non implémentée'); }
+
+  /**
+   * Abonnement aux frames.
+   * @param {(frame: SensorFrame) => void} cb
+   * @returns {() => void} désabonnement
+   */
+  onFrame(cb) { return this.on('frame', cb); }
+
+  /**
+   * Abonnement générique.
+   * @param {"frame"|"connected"|"disconnected"} type
+   * @param {Function} cb
+   * @returns {() => void} désabonnement
+   */
+  on(type, cb) {
+    if (typeof cb !== 'function') return () => {};
+    if (!this._handlers.has(type)) this._handlers.set(type, new Set());
+    this._handlers.get(type).add(cb);
+    return () => this._handlers.get(type)?.delete(cb);
+  }
+
+  /** Émet un événement ; l'erreur d'un abonné n'arrête pas les autres. */
+  _emit(type, payload) {
+    const set = this._handlers.get(type);
+    if (!set) return;
+    for (const cb of Array.from(set)) {
+      try { cb(payload); } catch (err) { console.error(`[NeoGuard/sensors] abonné "${type}" :`, err); }
+    }
+  }
+}
+
+/* ------------------------------ Utilitaires ------------------------------ */
+
+/** Générateur pseudo-aléatoire reproductible (mulberry32). */
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function rand() {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+
+/**
+ * Forme d'un complexe PQRST centré sur le pic R (t en secondes, R à t = 0).
+ * Somme de gaussiennes : [amplitude, centre (s), largeur (s)].
+ */
+const PQRST = [
+  [0.12, -0.17, 0.025],  // P
+  [-0.12, -0.035, 0.010], // Q
+  [1.0, 0.0, 0.012],      // R
+  [-0.22, 0.04, 0.012],   // S
+  [0.28, 0.24, 0.045],    // T
+];
+
+function qrstShape(t) {
+  if (t < -0.4 || t > 0.6) return 0; // hors du complexe : contribution nulle
+  let v = 0;
+  for (const [a, c, w] of PQRST) v += a * Math.exp(-((t - c) * (t - c)) / (2 * w * w));
+  return v;
+}
+
+/* --------------------------- SimulatedSensor ----------------------------- */
+
+/**
+ * Capteur simulé : une frame par seconde, FC/respiration naturelles,
+ * ECG synthétique à 125 Hz, sommeil calme/agité, changements de position rares.
+ */
+class SimulatedSensor extends SensorSource {
+  /**
+   * @param {Object} [opts]
+   * @param {number} [opts.baseHr=125]   FC de repos du bébé simulé
+   * @param {number} [opts.baseRr=40]    Respiration de repos
+   * @param {number} [opts.seed]         Graine (tests reproductibles)
+   * @param {number} [opts.patchAppliedAt] Époque de pose de la partie collante
+   * @param {number} [opts.tickMs=1000]  Période d'émission (tests)
+   */
+  constructor(opts = {}) {
+    super();
+    this._baseHr = isNum(opts.baseHr) ? opts.baseHr : 125;
+    this._baseRr = isNum(opts.baseRr) ? opts.baseRr : 40;
+    this._tickMs = isNum(opts.tickMs) && opts.tickMs > 0 ? opts.tickMs : 1000;
+    this._rand = mulberry32(isNum(opts.seed) ? opts.seed : Math.floor(Math.random() * 2 ** 31));
+    this._patchAppliedAt = isNum(opts.patchAppliedAt) ? opts.patchAppliedAt : Date.now();
+
+    this._timer = null;
+    this._running = false;
+    this._connected = true;      // piloté par l'override patchConnected
+    this._overrides = {};
+    this._apneaUntil = null;     // époque de fin d'apnée (si durée demandée)
+    this._lastTickAt = 0;
+    this._lastFrame = null;
+
+    // Valeurs lissées courantes (celles qui sortent dans les frames).
+    this._cur = { hr: this._baseHr, rr: this._baseRr, motion: 6 };
+    this._orientation = 'dos';
+
+    // Modèle naturel.
+    this._agitated = false;
+    this._agitatedLeft = 0;
+    this._driftHr = 0;
+    this._driftRr = 0;
+
+    // État de l'ECG synthétique (indices d'échantillons).
+    this._sample = 0;
+    this._lastBeat = -ECG_SAMPLE_RATE * 0.5;
+    this._nextBeat = 0;
+    this._compensate = false;    // pause compensatoire après un battement prématuré
+    this._respPhase = 0;         // phase respiratoire (rad) : arythmie sinusale + dérive
+  }
+
+  /* ----------------------------- Cycle de vie ---------------------------- */
+
+  start() {
+    if (this._running) return;
+    this._running = true;
+    this._lastTickAt = Date.now();
+    this._syncConnection();
+    if (this._connected) this._tick(1); // première frame immédiate
+    this._timer = setInterval(() => this._onTimer(), this._tickMs);
+  }
+
+  stop() {
+    if (this._timer !== null) clearInterval(this._timer);
+    this._timer = null;
+    this._running = false;
+  }
+
+  isConnected() {
+    return this._running && this._connected;
+  }
+
+  /** Dernière frame émise (ou null). Utile aux graphes. */
+  getLastFrame() {
+    return this._lastFrame;
+  }
+
+  /** Copie des surcharges actives. */
+  getOverrides() {
+    return { ...this._overrides };
+  }
+
+  /** Redéfinit la date de pose de la partie collante (bouton « J'ai changé… »). */
+  setPatchAppliedAt(epochMs) {
+    if (isNum(epochMs)) this._patchAppliedAt = epochMs;
+  }
+
+  /* ------------------------------ Surcharges ----------------------------- */
+
+  /**
+   * Applique/retire des surcharges (démo). Valeurs hors plage ramenées dans
+   * les bornes ; clé à null/undefined = surcharge retirée ; null = tout retirer.
+   * @param {SensorOverrides|null} obj
+   */
+  setOverrides(obj) {
+    if (obj === null) {
+      this._overrides = {};
+      this._apneaUntil = null;
+      this._syncConnection();
+      return;
+    }
+    if (!obj || typeof obj !== 'object') return;
+    const ov = this._overrides;
+
+    /** Pose ou retire une surcharge numérique bornée. */
+    const setNum = (key, v, lo, hi) => {
+      if (v === null || v === undefined) delete ov[key];
+      else if (isNum(v)) ov[key] = clamp(v, lo, hi);
+    };
+
+    for (const [key, v] of Object.entries(obj)) {
+      switch (key) {
+        case 'hr': setNum('hr', v, 20, 250); break;
+        case 'rr': setNum('rr', v, 0, 120); break;
+        case 'motion': setNum('motion', v, 0, 100); break;
+        case 'orientation':
+          if (v === null || v === undefined) delete ov.orientation;
+          else if (ORIENTATIONS.includes(v)) ov.orientation = v;
+          break;
+        case 'patchConnected':
+          if (v === null || v === undefined) delete ov.patchConnected;
+          else ov.patchConnected = Boolean(v);
+          break;
+        case 'apnea':
+          if (v === true) { ov.apnea = true; this._apneaUntil = null; }
+          else if (isNum(v) && v > 0) { ov.apnea = true; this._apneaUntil = Date.now() + v * 1000; }
+          else { delete ov.apnea; this._apneaUntil = null; }
+          break;
+        case 'arrhythmia':
+          if (v) ov.arrhythmia = true; else delete ov.arrhythmia;
+          break;
+        case 'patchAppliedAt': this.setPatchAppliedAt(v); break;
+        default:
+          console.warn(`[NeoGuard/sensors] surcharge inconnue ignorée : ${key}`);
+      }
+    }
+    this._syncConnection();
+  }
+
+  /* ------------------------------ Connexion ------------------------------ */
+
+  /** Aligne l'état de connexion sur l'override et émet l'événement voulu. */
+  _syncConnection() {
+    const want = this._overrides.patchConnected !== false;
+    if (want === this._connected) return;
+    this._connected = want;
+    if (this._running) this._emit(want ? 'connected' : 'disconnected', { t: Date.now() });
+  }
+
+  /* -------------------------------- Boucle ------------------------------- */
+
+  _onTimer() {
+    const now = Date.now();
+    // Durée réelle écoulée (onglet en arrière-plan => timers ralentis), bornée.
+    const dt = clamp((now - this._lastTickAt) / 1000, 0.5, 3);
+    this._lastTickAt = now;
+    this._syncConnection();
+    if (!this._connected) return; // déconnecté : aucune frame
+    this._tick(dt);
+  }
+
+  /** Construit et émet une frame. @param {number} dt secondes écoulées */
+  _tick(dt) {
+    try {
+      const frame = this._buildFrame(dt);
+      this._lastFrame = frame;
+      this._emit('frame', frame);
+    } catch (err) {
+      console.error('[NeoGuard/sensors] erreur de génération :', err);
+    }
+  }
+
+  /** Gaussienne centrée réduite (Box-Muller). */
+  _gauss() {
+    const u1 = Math.max(this._rand(), 1e-9);
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * this._rand());
+  }
+
+  /**
+   * Modèle naturel : sommeil calme / agitation occasionnelle, dérive lente,
+   * changements de position rares (jamais sur le ventre de lui-même).
+   */
+  _natural(dt) {
+    // Machine à états du sommeil : agitation ~ toutes les 10 min, 20-60 s.
+    if (this._agitated) {
+      this._agitatedLeft -= dt;
+      if (this._agitatedLeft <= 0) this._agitated = false;
+    } else if (this._rand() < dt / 600) {
+      this._agitated = true;
+      this._agitatedLeft = 20 + this._rand() * 40;
+    }
+    // Dérive lente (processus AR(1)) : variations naturelles de quelques bpm.
+    this._driftHr = 0.98 * this._driftHr + this._gauss() * 0.3;
+    this._driftRr = 0.98 * this._driftRr + this._gauss() * 0.12;
+
+    // Changement de position rare (~ toutes les 30 min) entre dos et côtés.
+    if (this._rand() < dt / 1800) {
+      const choices = ['dos', 'cote-gauche', 'cote-droit'].filter((o) => o !== this._orientation);
+      this._orientation = choices[Math.floor(this._rand() * choices.length)];
+    }
+
+    const a = this._agitated;
+    return {
+      hr: this._baseHr * (a ? 1.0 : 0.96) + (a ? 12 : 0) + this._driftHr,
+      rr: this._baseRr * (a ? 1.0 : 0.92) + (a ? 6 : 0) + this._driftRr,
+      motion: a ? clamp(45 + this._gauss() * 15, 20, 90) : 5 + Math.abs(this._gauss()) * 3,
+    };
+  }
+
+  /** L'apnée est-elle active ? (gère la fin automatique d'une durée demandée) */
+  _apneaActive() {
+    const ov = this._overrides;
+    if (ov.apnea !== true) return false;
+    if (this._apneaUntil !== null && Date.now() >= this._apneaUntil) {
+      delete ov.apnea;
+      this._apneaUntil = null;
+      return false;
+    }
+    return true;
+  }
+
+  _buildFrame(dt) {
+    const ov = this._overrides;
+    const nat = this._natural(dt);
+    const cur = this._cur;
+    const alpha = 1 - Math.exp(-dt / SMOOTHING_TAU_S); // lissage ~1,5 s
+    const apnea = this._apneaActive();
+
+    const targetHr = ov.hr ?? nat.hr;
+    const targetRr = ov.rr ?? nat.rr;
+    const targetMotion = ov.motion ?? nat.motion;
+
+    cur.hr += (targetHr - cur.hr) * alpha;
+
+    if (apnea) {
+      // Pause respiratoire : respiration plate immédiatement (l'arrêt est net),
+      // mouvement thoracique ~ 0. Le retour à la normale, lui, est lissé.
+      cur.rr = 0;
+      cur.motion = Math.abs(this._gauss()) * 0.6;
+    } else {
+      cur.rr += (targetRr - cur.rr) * alpha;
+      if (targetRr === 0 && cur.rr < 0.5) cur.rr = 0; // « collé » à zéro
+      cur.motion += (targetMotion - cur.motion) * alpha;
+    }
+
+    // Orientation : le gyroscope réagit tout de suite.
+    const orientation = ov.orientation ?? this._orientation;
+
+    const ecg = this._generateEcg(dt);
+
+    const rrOut = cur.rr === 0 ? 0 : Math.max(0, cur.rr + this._gauss() * 0.5);
+    return {
+      t: Date.now(),
+      hr: Math.round(clamp(cur.hr + this._gauss() * 0.8, 20, 250)),
+      ecg,
+      rr: Math.round(rrOut),
+      motion: Math.round(clamp(cur.motion, 0, 100)),
+      orientation,
+      patchConnected: true, // une frame n'existe que si le patch est connecté
+      patchAppliedAt: this._patchAppliedAt,
+    };
+  }
+
+  /* --------------------------------- ECG --------------------------------- */
+
+  /** Intervalle R-R (en échantillons) du prochain battement. */
+  _nextIntervalSamples() {
+    const cur = this._cur;
+    // Arythmie sinusale respiratoire : la FC oscille au rythme de la respiration.
+    const rsa = cur.rr > 0 ? 2.5 * Math.sin(this._respPhase) : 0;
+    let sec = 60 / Math.max(20, cur.hr + rsa);
+
+    if (this._overrides.arrhythmia) {
+      // Extrasystoles (battement prématuré + pause compensatoire) et jitter.
+      if (this._compensate) { sec *= 1.45; this._compensate = false; }
+      else if (this._rand() < 0.2) { sec *= 0.55; this._compensate = true; }
+      else sec *= 1 + (this._rand() - 0.5) * 0.3;
+    } else {
+      sec *= 1 + this._gauss() * 0.01; // variabilité très légère
+    }
+    return Math.max(0.25, sec) * ECG_SAMPLE_RATE;
+  }
+
+  /**
+   * Génère les échantillons ECG de la dernière seconde, en continuité avec
+   * la frame précédente (les battements chevauchent les frames).
+   * @param {number} dt secondes écoulées
+   * @returns {number[]}
+   */
+  _generateEcg(dt) {
+    const n = clamp(Math.round(ECG_SAMPLE_RATE * dt), 60, 375);
+    const cur = this._cur;
+
+    // Si la FC vient d'augmenter, ne pas attendre un battement trop lointain.
+    if (!this._overrides.arrhythmia) {
+      const maxNext = this._lastBeat + (60 / Math.max(20, cur.hr)) * ECG_SAMPLE_RATE * 1.1;
+      if (this._nextBeat > maxNext) this._nextBeat = Math.max(maxNext, this._sample + 1);
+    }
+
+    const out = new Array(n);
+    for (let i = 0; i < n; i++) {
+      const s = this._sample;
+      if (s >= this._nextBeat) {
+        this._lastBeat = this._nextBeat;
+        this._nextBeat = this._lastBeat + this._nextIntervalSamples();
+      }
+      // Complexe du battement précédent + onde P/Q du suivant.
+      const v =
+        qrstShape((s - this._lastBeat) / ECG_SAMPLE_RATE) +
+        qrstShape((s - this._nextBeat) / ECG_SAMPLE_RATE) +
+        0.04 * Math.sin(this._respPhase) +                      // ligne de base qui respire
+        0.02 * Math.sin((2 * Math.PI * 0.1 * s) / ECG_SAMPLE_RATE) + // dérive lente
+        this._gauss() * 0.012;                                  // bruit
+      this._respPhase += (2 * Math.PI * cur.rr) / 60 / ECG_SAMPLE_RATE;
+      out[i] = Math.round(v * 1000) / 1000;
+      this._sample++;
+    }
+    return out;
+  }
+}
+
+/* ----------------------- Adaptateur futur (Bluetooth) ---------------------
+ * BluetoothSensor (Web Bluetooth) — NON implémenté, respecterait la même
+ * interface que SensorSource :
+ *
+ *   export class BluetoothSensor extends SensorSource {
+ *     async start() {
+ *       // 1. navigator.bluetooth.requestDevice({ filters: [{ services: [SERVICE_UUID] }] })
+ *       //    (geste utilisateur obligatoire, contexte HTTPS)
+ *       // 2. device.gatt.connect(), puis getPrimaryService / getCharacteristic
+ *       // 3. characteristic.startNotifications() ;
+ *       //    addEventListener('characteristicvaluechanged', e => décoder e.target.value
+ *       //    (DataView) -> { hr, ecg[], rr, motion, orientation, patchAppliedAt })
+ *       //    puis this._emit('frame', frame) environ 1 fois par seconde.
+ *       // 4. device 'gattserverdisconnected' -> this._emit('disconnected', { t })
+ *       //    + tentative de reconnexion ; 'connected' au retour.
+ *     }
+ *     stop() { device.gatt.disconnect(); }
+ *     isConnected() { return Boolean(device?.gatt?.connected); }
+ *     // setOverrides() : sans effet (données réelles).
+ *   }
+ * ------------------------------------------------------------------------ */
+
+return { ECG_SAMPLE_RATE, ORIENTATIONS, SensorSource, SimulatedSensor };
+})();
+__m.ai = (function(){
+/**
+ * NeoGuard — js/ai.js
+ * ---------------------------------------------------------------------------
+ * Assistant IA : fusion FC + respiration + mouvement + orientation, comparée
+ * à la baseline personnelle du bébé, pour classer l'état :
+ *   normal | vigilance | pathologie-legere | urgence
+ *
+ * NeoGuard est une AIDE À LA SURVEILLANCE : ce module ne pose jamais de
+ * diagnostic. Les formulations restent prudentes ("plus rapide que d'habitude").
+ *
+ * Principes :
+ *  - assess() est une fonction PURE : elle lit `frame`, `profile` et `history`
+ *    sans rien modifier. L'appelant enregistre ensuite le résultat avec
+ *    recordResult() (qui, lui, modifie `history`).
+ *  - Les limites absolues de sécurité (seuils par âge) l'emportent TOUJOURS sur
+ *    la baseline : la baseline ne peut que resserrer la plage "normale".
+ *  - Les règles dures (pause >= 20 s, bradycardie soutenue > 10 s, ventre > 30 s)
+ *    donnent « urgence » quel que soit le score.
+ *
+ * Boucle type (main.js / demo.js, 1 fois par seconde) :
+ *   const result = assess(frame, profile, history);
+ *   recordResult(history, frame, result);
+ *
+ * Champs ajoutés au résultat (en plus du contrat) : `rawLevel` (niveau avant
+ * anti-clignotement) et `confidence` ("faible|moyenne|bonne"). Les ignorer est sans risque.
+ *
+ * Les seuils par âge sont des valeurs de départ À FAIRE VALIDER PAR UN PÉDIATRE.
+ */
+
+const { computeAgeMonths } = __m.state;
+
+/* ------------------------------ Configuration ----------------------------- */
+
+/** Seuils de départ par âge (mois) : FC en bpm, respiration en /min. */
+const AGE_TABLE = Object.freeze([
+  { from: 0, to: 3, hr: [100, 160], rr: [30, 60] },
+  { from: 3, to: 6, hr: [90, 150], rr: [25, 50] },
+  { from: 6, to: 12, hr: [80, 140], rr: [25, 50] },
+  { from: 12, to: 24, hr: [80, 130], rr: [20, 40] },
+]);
+
+/** Paramètres de l'IA (configurables). */
+const AI_CONFIG = Object.freeze({
+  K_MAD: 3.5,                    // bornes personnelles = médiane ± K·MAD
+  MAD_MIN: { hr: 3, rr: 1.5 },   // plancher de MAD (évite des bornes trop étroites)
+  BASELINE_MIN: 60,              // mesures de sommeil calme minimum pour activer
+  BASELINE_MAX: 2000,            // mesures conservées au maximum
+  BASELINE_GOOD: 300,            // au-delà : confiance "bonne"
+  VIGILANCE_SCORE: 35,
+  VIGILANCE_SCORE_RISK: 30,      // profil à risque : seuil de vigilance abaissé
+  URGENCE_SCORE: 65,             // (jamais abaissé)
+  PAUSE_VIGILANCE_S: 15,
+  PAUSE_VIGILANCE_RISK_S: 12,    // profil à risque : vigilance plus tôt
+  PAUSE_URGENCE_S: 20,
+  BRADY_URGENCE_S: 10,           // sous le minimum de l'âge depuis plus de 10 s
+  VENTRE_URGENCE_S: 30,
+  SMOOTH_WINDOW_MS: 10000,       // fenêtre glissante : on ignore ce qui a plus de 10 s…
+  SMOOTH_COUNT: 5,               // … et on prend la médiane des 5 dernières mesures
+  SLEEP_WINDOW_MS: 60000,        // fenêtre du calcul calme / agité
+  PERSIST_MS: 10 * 60 * 1000,    // durée de "déviation persistante"
+  PERSIST_COVERAGE: 0.8,         // couverture minimale de la fenêtre en frames
+  PERSIST_RATIO: 0.85,           // part de frames déviantes requise
+  HOLD_MS: 30000,                // désescalade seulement après 30 s stables
+  DISCONNECT_VIGILANCE_S: 60,    // patch déconnecté > 60 s => vigilance
+  AGITATED_EXT: { hr: 20, rr: 10 }, // tolérance en plus quand le bébé est agité
+  MAX_GAP_MS: 5000,              // trou entre frames qui interrompt une "durée continue"
+  MAX_FRAMES: 700,               // frames gardées (≈ 11,5 min)
+  MAX_ASSESSMENTS: 60,
+});
+
+const LEVELS = ['normal', 'vigilance', 'pathologie-legere', 'urgence'];
+const SEV = { normal: 0, vigilance: 1, 'pathologie-legere': 2, urgence: 3 };
+const MIN_SCORE = { normal: 0, vigilance: 35, 'pathologie-legere': 35, urgence: 65 };
+
+/* --------------------------------- Typedefs -------------------------------- */
+
+/**
+ * @typedef {Object} Profile
+ * @property {string} [firstName]
+ * @property {string} [birthdate]      "YYYY-MM-DD"
+ * @property {number} [ageMonths]      prioritaire sur birthdate s'il est fourni
+ * @property {"fille"|"garcon"} [sex]
+ * @property {boolean} [riskPregnancy] grossesse à risques
+ * @property {string} [familyHistory]  antécédents familiaux (texte libre)
+ * @property {boolean} [premature]     prématurité (sinon détectée dans le texte)
+ */
+
+/**
+ * @typedef {Object} AiHistory
+ * @property {Object[]} frames        dernières frames (chronologiques)
+ * @property {Object[]} assessments   derniers résultats (chronologiques)
+ * @property {{hr:number, rr:number, t:number}[]} calmSamples mesures de sommeil calme
+ * @property {Object|null} baseline   baseline calculée (null = inactive)
+ * @property {number|null} disconnectedSince époque du début de déconnexion
+ */
+
+/* -------------------------------- Utilitaires ------------------------------ */
+
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+
+/** Médiane d'un tableau de nombres (NaN si vide). */
+function median(values) {
+  if (!values.length) return NaN;
+  const s = [...values].sort((a, b) => a - b);
+  const m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+/** Écart absolu médian (MAD). */
+function mad(values, med) {
+  return median(values.map((v) => Math.abs(v - med)));
+}
+
+/**
+ * Seuils absolus pour un âge en mois (null => tranche 3-6 mois par défaut ;
+ * au-delà de 24 mois => dernière tranche).
+ * @param {number|null} ageMonths
+ * @returns {{from:number,to:number,hr:number[],rr:number[]}}
+ */
+function getAgeThresholds(ageMonths) {
+  if (!isNum(ageMonths)) return AGE_TABLE[1];
+  if (ageMonths >= AGE_TABLE[AGE_TABLE.length - 1].to) return AGE_TABLE[AGE_TABLE.length - 1];
+  return AGE_TABLE.find((r) => ageMonths >= r.from && ageMonths < r.to) || AGE_TABLE[0];
+}
+
+/** Âge en mois d'un profil à la date `t`. */
+function profileAgeMonths(profile, t) {
+  if (profile && isNum(profile.ageMonths)) return profile.ageMonths;
+  if (profile && profile.birthdate) return computeAgeMonths(profile.birthdate, new Date(t));
+  return null;
+}
+
+/** Le profil est-il "à risque" (grossesse à risques, antécédents, prématurité) ? */
+function isRiskProfile(profile) {
+  if (!profile) return false;
+  if (profile.riskPregnancy || profile.premature) return true;
+  const txt = String(profile.familyHistory || '').trim();
+  if (!txt) return false;
+  if (/pr[ée]matur/i.test(txt)) return true;
+  return !/^(aucun|aucune|rien|non|ras|n\/a|néant|neant)\.?$/i.test(txt);
+}
+
+/** Durée (s) pendant laquelle `pred` est vraie sans interruption, jusqu'à la dernière frame. */
+function runSeconds(frames, pred) {
+  const last = frames[frames.length - 1];
+  if (!last) return 0;
+  let start = null;
+  let prev = last.t;
+  for (let i = frames.length - 1; i >= 0; i--) {
+    const f = frames[i];
+    if (!pred(f) || prev - f.t > AI_CONFIG.MAX_GAP_MS) break;
+    start = f.t;
+    prev = f.t;
+  }
+  return start === null ? 0 : (last.t - start) / 1000;
+}
+
+/* --------------------------------- Baseline -------------------------------- */
+
+/**
+ * Baseline personnelle : médiane + MAD de FC et RR sur les N dernières mesures
+ * de sommeil calme (une "mesure" = moyenne d'une minute de sommeil calme).
+ * Inactive en dessous de 60 mesures.
+ * @param {{hr:number, rr:number}[]} samples
+ * @returns {{active:boolean, count:number, hr?:{median:number,mad:number}, rr?:{median:number,mad:number}}}
+ */
+function computeBaseline(samples) {
+  const list = (samples || []).slice(-AI_CONFIG.BASELINE_MAX).filter((s) => isNum(s.hr) && isNum(s.rr));
+  if (list.length < AI_CONFIG.BASELINE_MIN) return { active: false, count: list.length };
+  const hrs = list.map((s) => s.hr);
+  const rrs = list.map((s) => s.rr);
+  const hrMed = median(hrs);
+  const rrMed = median(rrs);
+  return {
+    active: true,
+    count: list.length,
+    hr: { median: hrMed, mad: Math.max(mad(hrs, hrMed), AI_CONFIG.MAD_MIN.hr) },
+    rr: { median: rrMed, mad: Math.max(mad(rrs, rrMed), AI_CONFIG.MAD_MIN.rr) },
+  };
+}
+
+/** Confiance associée à une baseline. */
+function baselineConfidence(baseline) {
+  if (!baseline.active) return 'faible';
+  return baseline.count >= AI_CONFIG.BASELINE_GOOD ? 'bonne' : 'moyenne';
+}
+
+/**
+ * Bornes pour FC et RR : limites absolues de l'âge, resserrées par la baseline
+ * (jamais élargies), et rehaussées si le bébé est agité.
+ */
+function buildBands(thr, baseline, agitated) {
+  const make = (abs, b, ext) => {
+    let lo = abs[0];
+    let hi = abs[1];
+    if (baseline.active && b) {
+      lo = Math.max(abs[0], b.median - AI_CONFIG.K_MAD * b.mad);
+      hi = Math.min(abs[1], b.median + AI_CONFIG.K_MAD * b.mad);
+      if (lo > hi) lo = hi = clamp(b.median, abs[0], abs[1]);
+    }
+    if (agitated) hi = Math.min(abs[1], hi + ext);
+    return { abs, lo, hi };
+  };
+  return {
+    hr: make(thr.hr, baseline.hr, AI_CONFIG.AGITATED_EXT.hr),
+    rr: make(thr.rr, baseline.rr, AI_CONFIG.AGITATED_EXT.rr),
+  };
+}
+
+/**
+ * Infos de baseline pour l'écran IA (#screen-ai).
+ * @param {AiHistory} history
+ * @param {Profile} profile
+ * @param {number} [t] époque (défaut : dernière frame connue)
+ */
+function getBaselineInfo(history, profile, t) {
+  const hist = history || createHistory();
+  const baseline = hist.baseline || computeBaseline(hist.calmSamples);
+  const when = isNum(t) ? t : hist.frames.length ? hist.frames[hist.frames.length - 1].t : 0;
+  const ageMonths = profileAgeMonths(profile, when);
+  const thr = getAgeThresholds(ageMonths);
+  const bands = buildBands(thr, baseline, false);
+  return {
+    active: baseline.active,
+    count: baseline.count,
+    confidence: baselineConfidence(baseline),
+    ageMonths,
+    hr: { median: baseline.hr?.median ?? null, low: bands.hr.lo, high: bands.hr.hi, abs: thr.hr },
+    rr: { median: baseline.rr?.median ?? null, low: bands.rr.lo, high: bands.rr.hi, abs: thr.rr },
+  };
+}
+
+/* --------------------------------- Historique ------------------------------ */
+
+/**
+ * Crée un historique vide (ou pré-rempli depuis la base : mesures de sommeil
+ * calme déjà enregistrées). En mode démo, créer un historique SÉPARÉ et ne
+ * jamais le persister.
+ * @param {{calmSamples?: {hr:number, rr:number, t?:number}[]}} [opts]
+ * @returns {AiHistory}
+ */
+function createHistory(opts = {}) {
+  const calmSamples = (opts.calmSamples || []).slice(-AI_CONFIG.BASELINE_MAX);
+  return {
+    frames: [],
+    assessments: [],
+    calmSamples,
+    baseline: calmSamples.length ? computeBaseline(calmSamples) : null,
+    disconnectedSince: null,
+    _acc: null, // accumulateur de la minute de sommeil calme en cours
+  };
+}
+
+/** Signale une déconnexion du patch (début). */
+function markDisconnected(history, t) {
+  if (history.disconnectedSince === null) history.disconnectedSince = t;
+}
+
+/** Signale le retour du patch. */
+function markConnected(history) {
+  history.disconnectedSince = null;
+}
+
+/**
+ * Enregistre une frame et son résultat dans l'historique (modifie `history`).
+ * Alimente aussi la baseline : une mesure de sommeil calme est ajoutée chaque
+ * minute, uniquement si l'état est resté normal (la baseline n'apprend donc
+ * jamais des périodes anormales).
+ * @param {AiHistory} history
+ * @param {Object} frame
+ * @param {Object} result sortie de assess()
+ */
+function recordResult(history, frame, result) {
+  if (result) {
+    history.assessments.push(result);
+    if (history.assessments.length > AI_CONFIG.MAX_ASSESSMENTS) {
+      history.assessments.splice(0, history.assessments.length - AI_CONFIG.MAX_ASSESSMENTS);
+    }
+  }
+  if (!frame || frame.patchConnected === false) return; // pas de frame réelle
+  history.frames.push(frame);
+  if (history.frames.length > AI_CONFIG.MAX_FRAMES) {
+    history.frames.splice(0, history.frames.length - AI_CONFIG.MAX_FRAMES);
+  }
+
+  const calm =
+    result && result.sleep === 'calme' && result.level === 'normal' &&
+    (result.rawLevel || 'normal') === 'normal' && isNum(frame.hr) && frame.rr >= 1;
+  if (!calm) return;
+
+  if (!history._acc) history._acc = { start: frame.t, n: 0, hr: 0, rr: 0 };
+  const acc = history._acc;
+  acc.n += 1;
+  acc.hr += frame.hr;
+  acc.rr += frame.rr;
+  if (frame.t - acc.start >= 60000) {
+    if (acc.n >= 30) {
+      history.calmSamples.push({ t: frame.t, hr: acc.hr / acc.n, rr: acc.rr / acc.n });
+      if (history.calmSamples.length > AI_CONFIG.BASELINE_MAX) {
+        history.calmSamples.splice(0, history.calmSamples.length - AI_CONFIG.BASELINE_MAX);
+      }
+      history.baseline = computeBaseline(history.calmSamples);
+    }
+    history._acc = null;
+  }
+}
+
+/* ------------------------------- Calcul du score --------------------------- */
+
+/**
+ * Score d'écart d'une mesure par rapport à ses bornes.
+ *  - dans la plage personnelle : 0
+ *  - hors plage personnelle mais dans les limites absolues : 15..40
+ *  - au-delà des limites absolues : 40..75 selon l'excès relatif
+ */
+function metricScore(v, band) {
+  const none = { score: 0, side: null, beyondAbs: false };
+  if (!isNum(v)) return none;
+  const { abs, lo, hi } = band;
+  if (v > hi) {
+    if (v <= abs[1]) {
+      const gap = abs[1] - hi;
+      const r = gap > 0 ? clamp((v - hi) / gap, 0, 1) : 1;
+      return { score: 15 + 25 * r, side: 'high', beyondAbs: false };
+    }
+    return { score: 40 + Math.min(35, ((v - abs[1]) / abs[1]) * 100), side: 'high', beyondAbs: true };
+  }
+  if (v < lo) {
+    if (v >= abs[0]) {
+      const gap = lo - abs[0];
+      const r = gap > 0 ? clamp((lo - v) / gap, 0, 1) : 1;
+      return { score: 15 + 25 * r, side: 'low', beyondAbs: false };
+    }
+    return { score: 40 + Math.min(35, ((abs[0] - v) / abs[0]) * 100), side: 'low', beyondAbs: true };
+  }
+  return none;
+}
+
+/** Score de pause respiratoire (pv = seuil de vigilance en secondes). */
+function pauseScore(sec, pv) {
+  if (sec < 8) return 0;
+  if (sec < pv) return 10 + ((sec - 8) / (pv - 8)) * 24; // 10..34
+  if (sec < AI_CONFIG.PAUSE_URGENCE_S) {
+    return 55 + ((sec - pv) / (AI_CONFIG.PAUSE_URGENCE_S - pv)) * 9; // 55..64
+  }
+  return 100;
+}
+
+/** Sommeil : variance (écart-type) et moyenne du mouvement sur 60 s. */
+function sleepState(frames, t) {
+  const win = frames.filter((f) => isNum(f.motion) && t - f.t <= AI_CONFIG.SLEEP_WINDOW_MS);
+  if (!win.length) return { sleep: 'calme', meanMotion: 0 };
+  const vals = win.map((f) => f.motion);
+  const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+  if (vals.length < 5) return { sleep: vals[vals.length - 1] >= 30 ? 'agite' : 'calme', meanMotion: mean };
+  const sd = Math.sqrt(vals.reduce((a, b) => a + (b - mean) ** 2, 0) / vals.length);
+  return { sleep: sd >= 12 || mean >= 25 ? 'agite' : 'calme', meanMotion: mean };
+}
+
+/** Déviation persistante (> 10 min) de la FC ou de la respiration. */
+function persistentDeviation(frames, t, thr, baseline) {
+  const win = frames.filter((f) => t - f.t <= AI_CONFIG.PERSIST_MS);
+  const need = (AI_CONFIG.PERSIST_MS / 1000) * AI_CONFIG.PERSIST_COVERAGE;
+  if (win.length < need || t - win[0].t < AI_CONFIG.PERSIST_MS * 0.95) return null;
+
+  const stat = { hr: { n: 0, high: 0, low: 0, vals: [] }, rr: { n: 0, high: 0, low: 0, vals: [] } };
+  for (const f of win) {
+    const bands = buildBands(thr, baseline, f.motion >= 30);
+    for (const key of ['hr', 'rr']) {
+      if (key === 'rr' && !(f.rr >= 1)) continue; // pause : géré ailleurs
+      stat[key].n += 1;
+      const r = metricScore(f[key], bands[key]);
+      if (r.score >= 15) {
+        stat[key][r.side] += 1;
+        stat[key].vals.push(f[key]);
+      }
+    }
+  }
+  const out = {};
+  for (const key of ['hr', 'rr']) {
+    const s = stat[key];
+    const flagged = s.high + s.low;
+    if (s.n > 0 && flagged / s.n >= AI_CONFIG.PERSIST_RATIO) {
+      out[key] = { side: s.high >= s.low ? 'high' : 'low', value: Math.round(median(s.vals)) };
+    }
+  }
+  return out.hr || out.rr ? out : null;
+}
+
+/* ---------------------------------- assess --------------------------------- */
+
+/**
+ * Évalue l'état du bébé à partir de la frame courante et de l'historique.
+ * Fonction pure : ne modifie ni `frame`, ni `profile`, ni `history`.
+ *
+ * @param {Object} frame     frame capteur (contrat de données) ; pour signaler
+ *                           une déconnexion : { t, patchConnected: false }
+ * @param {Profile} profile
+ * @param {AiHistory} history
+ * @returns {{level:string, score:number, reasons:string[], sleep:string, t:number,
+ *            rawLevel:string, confidence:string}}
+ */
+function assess(frame, profile, history) {
+  const hist = history || createHistory();
+  const t = isNum(frame && frame.t) ? frame.t : 0;
+  const name = (profile && String(profile.firstName || '').trim()) || 'votre bébé';
+  const baseline = hist.baseline || computeBaseline(hist.calmSamples);
+  const confidence = baselineConfidence(baseline);
+  const ageMonths = profileAgeMonths(profile, t);
+  const thr = getAgeThresholds(ageMonths);
+  const risk = isRiskProfile(profile);
+
+  let raw;
+  if (!frame || frame.patchConnected === false) {
+    raw = assessDisconnected(t, hist, name);
+  } else {
+    raw = assessConnected(frame, hist, { name, baseline, thr, risk });
+  }
+  return finalize(raw, t, hist, name, confidence);
+}
+
+/** Patch déconnecté : pas de mesures, seulement la durée de déconnexion. */
+function assessDisconnected(t, hist, name) {
+  const since = isNum(hist.disconnectedSince) ? hist.disconnectedSince : null;
+  const sec = since === null ? AI_CONFIG.DISCONNECT_VIGILANCE_S : Math.max(0, (t - since) / 1000);
+  if (sec >= AI_CONFIG.DISCONNECT_VIGILANCE_S) {
+    return {
+      level: 'vigilance',
+      score: 45,
+      sleep: 'inconnu',
+      reasons: [
+        `Patch déconnecté : NeoGuard ne peut plus surveiller ${name}.`,
+        'Vérifiez que le patch est bien collé et à portée du téléphone.',
+      ],
+    };
+  }
+  return {
+    level: 'normal',
+    score: 15,
+    sleep: 'inconnu',
+    reasons: [`Patch déconnecté depuis ${Math.round(sec)} s : reconnexion en cours.`],
+  };
+}
+
+/** Évaluation à partir de mesures réelles. */
+function assessConnected(frame, hist, ctx) {
+  const { name, baseline, thr, risk } = ctx;
+  const t = frame.t;
+  const frames = hist.frames.concat([frame]);
+  const { sleep, meanMotion } = sleepState(frames, t);
+  const agitated = sleep === 'agite';
+  const bands = buildBands(thr, baseline, agitated);
+
+  // Mesures lissées : médiane des 5 dernières mesures des 10 dernières secondes.
+  const recent = frames.filter((f) => t - f.t <= AI_CONFIG.SMOOTH_WINDOW_MS).slice(-AI_CONFIG.SMOOTH_COUNT);
+  const hrS = median(recent.map((f) => f.hr).filter(isNum));
+  const rrS = median(recent.filter((f) => f.rr >= 1).map((f) => f.rr));
+
+  /** @type {{score:number, reasons:string[]}[]} */
+  const comps = [];
+  let hard = false;
+  const fmt = (n) => Math.round(n);
+
+  // --- Fréquence cardiaque ---
+  const hrRes = metricScore(hrS, bands.hr);
+  if (hrRes.score > 0) {
+    const dir = hrRes.side === 'high' ? 'plus rapide' : 'plus lent';
+    const range = hrRes.beyondAbs
+      ? `plage attendue à son âge : ${bands.hr.abs[0]}-${bands.hr.abs[1]}`
+      : `habituel pour ${name} : ${fmt(bands.hr.lo)}-${fmt(bands.hr.hi)}`;
+    comps.push({
+      score: hrRes.score,
+      reasons: [`Rythme cardiaque ${dir} que d'habitude pour ${name} : ${fmt(hrS)} bpm (${range}).`],
+    });
+  }
+
+  // --- Bradycardie soutenue (règle dure) ---
+  const bradySec = runSeconds(frames, (f) => isNum(f.hr) && f.hr < thr.hr[0]);
+  if (bradySec > AI_CONFIG.BRADY_URGENCE_S) {
+    hard = true;
+    comps.push({
+      score: 90,
+      reasons: [`Rythme cardiaque sous le minimum attendu à son âge (${thr.hr[0]} bpm) depuis ${fmt(bradySec)} s : ${fmt(frame.hr)} bpm.`],
+    });
+  }
+
+  // --- Respiration ---
+  const rrRes = metricScore(rrS, bands.rr);
+  if (rrRes.score > 0) {
+    const dir = rrRes.side === 'high' ? 'plus rapide' : 'plus lente';
+    const range = rrRes.beyondAbs
+      ? `plage attendue à son âge : ${bands.rr.abs[0]}-${bands.rr.abs[1]}/min`
+      : `habituel pour ${name} : ${fmt(bands.rr.lo)}-${fmt(bands.rr.hi)}/min`;
+    comps.push({
+      score: rrRes.score,
+      reasons: [`Respiration ${dir} que d'habitude pour ${name} : ${fmt(rrS)}/min (${range}).`],
+    });
+  }
+
+  // --- Pause respiratoire (rr à 0) ---
+  const pauseSec = runSeconds(frames, (f) => f.rr < 1);
+  const pv = risk ? AI_CONFIG.PAUSE_VIGILANCE_RISK_S : AI_CONFIG.PAUSE_VIGILANCE_S;
+  let pScore = pauseScore(pauseSec, pv);
+  if (pauseSec >= 8 && frame.motion < 3) pScore = Math.min(100, pScore + 5); // aucun mouvement du tout
+  if (pauseSec < AI_CONFIG.PAUSE_URGENCE_S) pScore = Math.min(pScore, AI_CONFIG.URGENCE_SCORE - 1); // urgence seulement dès 20 s
+  if (pauseSec >= AI_CONFIG.PAUSE_URGENCE_S) hard = true;
+  if (pScore > 0) {
+    comps.push({ score: pScore, reasons: [`Aucun mouvement respiratoire depuis ${fmt(pauseSec)} s.`] });
+  }
+
+  // --- Orientation : ventre ---
+  const ventreSec = runSeconds(frames, (f) => f.orientation === 'ventre');
+  if (frame.orientation === 'ventre') {
+    if (!agitated) {
+      if (ventreSec > AI_CONFIG.VENTRE_URGENCE_S) {
+        hard = true;
+        comps.push({ score: 85, reasons: [`${name} est sur le ventre pendant son sommeil depuis ${fmt(ventreSec)} s.`] });
+      } else {
+        comps.push({
+          score: 40 + Math.min(24, ventreSec * 0.8),
+          reasons: [`${name} est sur le ventre pendant son sommeil${ventreSec >= 1 ? ` depuis ${fmt(ventreSec)} s` : ''}.`],
+        });
+      }
+    } else {
+      comps.push({ score: 10, reasons: [`${name} est sur le ventre : restez à proximité.`] });
+    }
+  }
+
+  // --- Mouvement : agitation intense prolongée ---
+  if (meanMotion >= 70) comps.push({ score: 12, reasons: [`${name} est très agité(e) depuis un moment (sommeil agité).`] });
+  else if (meanMotion >= 50) comps.push({ score: 6, reasons: [] });
+
+  // --- Score global : composante dominante + part des autres ---
+  const scores = comps.map((c) => c.score).sort((a, b) => b - a);
+  const top = scores[0] || 0;
+  const rest = scores.slice(1).reduce((a, b) => a + b, 0);
+  let score = Math.round(Math.min(100, top + 0.35 * rest));
+
+  // --- Niveau instantané ---
+  const vigThreshold = risk ? AI_CONFIG.VIGILANCE_SCORE_RISK : AI_CONFIG.VIGILANCE_SCORE;
+  let level = 'normal';
+  if (hard || score >= AI_CONFIG.URGENCE_SCORE) level = 'urgence';
+  else if (score >= vigThreshold) level = 'vigilance';
+  if (hard) score = Math.max(score, AI_CONFIG.URGENCE_SCORE);
+
+  const reasons = comps.sort((a, b) => b.score - a.score).flatMap((c) => c.reasons);
+
+  // --- Déviation modérée mais persistante (> 10 min) ---
+  if (level === 'normal' || level === 'vigilance') {
+    const persist = persistentDeviation(frames, t, thr, baseline);
+    if (persist) {
+      level = 'pathologie-legere';
+      score = Math.max(score, 45);
+      if (persist.rr) {
+        const dir = persist.rr.side === 'high' ? 'plus rapide' : 'plus lente';
+        reasons.unshift(`La respiration de ${name} reste ${dir} que d'habitude depuis plus de 10 minutes (environ ${persist.rr.value}/min).`);
+      }
+      if (persist.hr) {
+        const dir = persist.hr.side === 'high' ? 'plus rapide' : 'plus lent';
+        reasons.unshift(`Le rythme cardiaque de ${name} reste ${dir} que d'habitude depuis plus de 10 minutes (environ ${persist.hr.value} bpm).`);
+      }
+    }
+  }
+
+  // --- Phrases d'accompagnement (prudentes, jamais de diagnostic) ---
+  if (level === 'normal') {
+    reasons.push(baseline.active
+      ? `Tout est dans la norme habituelle de ${name}.`
+      : `Tout est dans la plage attendue pour l'âge de ${name}.`);
+  } else {
+    if ((level === 'vigilance' || level === 'pathologie-legere') && risk) {
+      reasons.push('Profil à risque (grossesse à risques, antécédents ou prématurité) : seuils de vigilance légèrement abaissés.');
+    }
+    if (level === 'vigilance') reasons.push(`Jetez un œil à ${name} dès que possible.`);
+    if (level === 'pathologie-legere') reasons.push('Cette situation dure : parlez-en à un professionnel de santé.');
+    if (level === 'urgence') reasons.push(`Vérifiez ${name} immédiatement ; appelez les secours si nécessaire.`);
+  }
+
+  return { level, score, sleep, reasons };
+}
+
+/**
+ * Anti-clignotement : l'escalade est immédiate ; la désescalade n'a lieu qu'après
+ * 30 s pendant lesquelles aucun niveau supérieur n'a été mesuré.
+ */
+function finalize(raw, t, hist, name, confidence) {
+  const rawSev = SEV[raw.level];
+  let heldSev = rawSev;
+  let src = null;
+  for (const a of hist.assessments || []) {
+    if (!a || !(a.t < t) || t - a.t > AI_CONFIG.HOLD_MS) continue;
+    const s = SEV[a.rawLevel || a.level] ?? 0;
+    if (s > heldSev) { heldSev = s; src = a; }
+    else if (s === heldSev && src && a.t > src.t) src = a;
+  }
+
+  if (heldSev > rawSev && src) {
+    const level = LEVELS[heldSev];
+    const remaining = Math.max(1, Math.ceil((AI_CONFIG.HOLD_MS - (t - src.t)) / 1000));
+    const kept = (src.reasons || []).filter((r) => !r.startsWith('Situation redevenue'));
+    return {
+      level,
+      score: Math.max(raw.score, MIN_SCORE[level]),
+      reasons: [
+        ...kept,
+        `Situation redevenue plus calme : l'état de ${name} reste surveillé encore ${remaining} s par prudence.`,
+      ],
+      sleep: raw.sleep,
+      t,
+      rawLevel: raw.level,
+      confidence,
+    };
+  }
+  return { level: raw.level, score: raw.score, reasons: raw.reasons, sleep: raw.sleep, t, rawLevel: raw.level, confidence };
+}
+
+/* ------------------------------ Cas de test --------------------------------
+ * Profil de test : { firstName:'Léa', birthdate:'2026-06-10', sex:'fille' }
+ * évalué le 2026-10-10 (4 mois => FC 90-150, RR 25-50). Frames à 1 Hz,
+ * motion 5, orientation "dos" sauf mention. Boucle : assess() puis recordResult().
+ *
+ *  1) Normal : hr 118, rr 38 pendant 120 s
+ *       -> level "normal", score < 35, raison "Tout est dans la plage attendue…".
+ *  2) FC haute : après (1), hr 175 pendant 15 s
+ *       -> "vigilance" (score ≈ 57), raison "Rythme cardiaque plus rapide… 175 bpm".
+ *  3) RR haute : après (1), rr 60 pendant 15 s
+ *       -> "vigilance" (score ≈ 60), raison "Respiration plus rapide que d'habitude
+ *          pour Léa : 60/min".
+ *  4) Pause respiratoire : après (1), rr 0 et motion 1
+ *       -> à 17 s : "vigilance", "Aucun mouvement respiratoire depuis 17 s" ;
+ *          à 20 s et plus : "urgence" (règle dure).
+ *  5) Bradycardie soutenue : après (1), hr 70 pendant 12 s
+ *       -> "vigilance" à 8 s (score ≈ 62) ; "urgence" dès que la durée sous
+ *          90 bpm dépasse 10 s (règle dure).
+ *  6) Ventre pendant le sommeil : orientation "ventre", motion 5
+ *       -> "vigilance" dès le début ; "urgence" au-delà de 30 s.
+ *  7) Profil à risque (riskPregnancy: true) : pause de 13 s
+ *       -> "vigilance" avec raison "Profil à risque… seuils abaissés" ;
+ *          le même cas sans profil à risque reste "normal".
+ *  8) Anti-clignotement : urgence (pause 21 s) puis retour à des valeurs normales
+ *       -> le niveau reste "urgence" 30 s ("Situation redevenue plus calme…"),
+ *          puis redevient "normal" ; une seule frame aberrante ne change rien
+ *          (médiane des 5 dernières mesures).
+ *  Bonus : (a) rr 55 pendant 11 min -> "pathologie-legere" (tachypnée soutenue) ;
+ *          (b) { t, patchConnected:false } avec disconnectedSince ancien de 70 s
+ *              -> "vigilance", sleep "inconnu".
+ * ------------------------------------------------------------------------- */
+
+return { AGE_TABLE, AI_CONFIG, getAgeThresholds, computeBaseline, getBaselineInfo, createHistory, markDisconnected, markConnected, recordResult, assess };
+})();
+__m.alerts = (function(){
+/**
+ * NeoGuard — js/alerts.js
+ * ---------------------------------------------------------------------------
+ * Alertes et notifications.
+ *
+ *  - vigilance / pathologie-legere : toast doux (#vigilance-toast), sonnerie
+ *    douce unique, Notification silencieuse. Limite : 1 notification toutes les
+ *    2 min pour le même motif.
+ *  - urgence : écran rouge (#emergency-overlay), bip-bip fort en boucle,
+ *    vibration en boucle, Notification persistante, focus sur #btn-ok-intervened.
+ *  - rappel des 24 h : toast #reminder-toast, puis re-rappel toutes les 6 h.
+ *
+ * Isolation du mode démo :
+ *  - en démo, RIEN n'est transmis à persistAlert / persistPatchAppliedAt ;
+ *    les alertes ne sont diffusées qu'aux abonnés (subscribeAlerts), dont
+ *    demo.js qui les écrit dans #demo-log ;
+ *  - toutes les notifications sont préfixées « [TEST] », l'overlay affiche
+ *    « TEST — ceci n'est pas une vraie alerte » et le bouton « Appeler SAMU »
+ *    NE compose JAMAIS le numéro (appel simulé).
+ *
+ * Aide à la surveillance : ce module n'annonce jamais de diagnostic.
+ */
+
+const { getState, setState, subscribe, isDemo } = __m.state;
+
+/* ------------------------------ Configuration ----------------------------- */
+
+const CFG = Object.freeze({
+  THROTTLE_MS: 2 * 60 * 1000,          // 1 notification / 2 min / motif
+  GRACE_MS: 60 * 1000,                 // période de grâce après « j'ai intervenu »
+  REMINDER_FIRST_MS: 24 * 3600 * 1000, // rappel de la partie collante
+  REMINDER_REPEAT_MS: 6 * 3600 * 1000, // re-rappel
+  TOAST_VIGILANCE_MS: 12000,
+  TOAST_REMINDER_MS: 20000,
+  BEEP_PERIOD_MS: 400,                 // 0,25 s son + 0,15 s silence
+  BEEP_ON_S: 0.25,
+  SOFT_VOLUME: 0.06,
+  BEEP_VOLUME: 0.35,
+});
+
+/* --------------------------- État privé du module -------------------------- */
+
+/** Branchements fournis par main.js (tous facultatifs). */
+let options = {
+  /** @type {null|((alert:Object)=>Promise<void>|void)} enregistre une alerte (LIVE uniquement) */
+  persistAlert: null,
+  /** @type {null|((epochMs:number)=>Promise<void>|void)} enregistre la nouvelle date de pose (LIVE uniquement) */
+  persistPatchAppliedAt: null,
+  /** @type {null|((epochMs:number)=>void)} informe la source capteur (setPatchAppliedAt) */
+  setSensorPatchAppliedAt: null,
+  /** Délai anti-répétition des notifications (ms). */
+  throttleMs: CFG.THROTTLE_MS,
+};
+
+let initialized = false;
+/** @type {AudioContext|null} */
+let audioCtx = null;
+let beepTimer = null;
+let vibrateTimer = null;
+
+/** Overlay d'urgence : état courant. */
+const emergency = {
+  active: false,
+  cats: new Set(),
+  returnFocus: null,
+  notif: null,
+  renderKey: '',
+};
+
+/** motif -> dernière notification (ms). */
+const lastNotifiedAt = new Map();
+/** motif -> fin de la période de grâce (ms). */
+const graceUntil = new Map();
+/** Rappel 24 h : pour quelle pose, et dernier rappel. */
+const reminder = { forPatch: null, lastAt: null };
+const toastTimers = { vigilance: null, reminder: null };
+const listeners = new Set();
+let seq = 0;
+
+/* -------------------------------- Utilitaires ------------------------------ */
+
+const $ = (id) => (typeof document === 'undefined' ? null : document.getElementById(id));
+const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
+const testPrefix = () => (isDemo() ? '[TEST] ' : '');
+const soundEnabled = () => getState().settings.sound !== false;
+const vibrationEnabled = () => getState().settings.vibration !== false;
+const babyName = () => String(getState().profile?.firstName || '').trim() || 'votre bébé';
+
+/** Classe de gravité : 0 normal, 1 vigilance/pathologie légère, 2 urgence. */
+function levelClass(level) {
+  if (level === 'urgence') return 2;
+  if (level === 'vigilance' || level === 'pathologie-legere') return 1;
+  return 0;
+}
+
+/**
+ * Catégories (« motifs ») d'une liste de raisons : sert à l'anti-répétition et
+ * à la période de grâce, sans dépendre des chiffres qui changent chaque seconde.
+ * @param {string[]} reasons
+ * @returns {string[]}
+ */
+function categorize(reasons) {
+  const cats = new Set();
+  for (const raw of reasons || []) {
+    const r = String(raw).toLowerCase();
+    if (r.includes('respirat')) cats.add('respiration');
+    else if (r.includes('cardiaque')) cats.add('coeur');
+    else if (r.includes('ventre')) cats.add('position');
+    else if (r.includes('déconnect') || r.includes('patch')) cats.add('patch');
+    else if (r.includes('agité')) cats.add('mouvement');
+  }
+  return cats.size ? Array.from(cats) : ['general'];
+}
+
+/** Garde uniquement chiffres, +, * et # d'un numéro de téléphone (défaut 190). */
+function sanitizePhone(value) {
+  const cleaned = String(value ?? '').replace(/[^\d+*#]/g, '');
+  return cleaned || '190';
+}
+
+/* ------------------------------ Journal d'alertes -------------------------- */
+
+/**
+ * S'abonne aux alertes produites ({ id, t, level, reasons, source, action }).
+ * Les abonnés doivent filtrer sur `source` : l'historique réel ignore "demo",
+ * le journal de test ignore "live".
+ * @param {(alert:Object)=>void} fn
+ * @returns {() => void} désabonnement
+ */
+function subscribeAlerts(fn) {
+  if (typeof fn !== 'function') return () => {};
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+/**
+ * Crée l'objet d'alerte, l'enregistre (LIVE uniquement, niveau != normal) et
+ * le diffuse aux abonnés.
+ */
+function record(level, reasons, action) {
+  const t = Date.now();
+  const alert = {
+    id: `${t.toString(36)}-${(++seq).toString(36)}`,
+    t,
+    level,
+    reasons: [...reasons],
+    source: isDemo() ? 'demo' : 'live',
+    action,
+  };
+  if (alert.source === 'live' && level !== 'normal' && typeof options.persistAlert === 'function') {
+    try {
+      Promise.resolve(options.persistAlert(alert)).catch((e) =>
+        console.warn('[NeoGuard/alerts] enregistrement impossible :', e));
+    } catch (e) {
+      console.warn('[NeoGuard/alerts] enregistrement impossible :', e);
+    }
+  }
+  for (const fn of Array.from(listeners)) {
+    try { fn(alert); } catch (e) { console.error('[NeoGuard/alerts] abonné :', e); }
+  }
+  return alert;
+}
+
+/* ---------------------------------- Audio ---------------------------------- */
+
+/** Le son est-il débloqué (AudioContext en cours d'exécution) ? */
+function isAudioUnlocked() {
+  return Boolean(audioCtx) && audioCtx.state === 'running';
+}
+
+/**
+ * Crée/reprend l'AudioContext. À appeler lors d'un GESTE utilisateur
+ * (lié à #btn-enable-audio ; aussi déclenché au premier toucher de la page).
+ * @returns {Promise<boolean>} true si le son est prêt
+ */
+async function unlockAudio() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    if (!audioCtx) audioCtx = new AC();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    // Impulsion inaudible : déverrouille certains navigateurs mobiles (iOS).
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    gain.gain.value = 0.0001;
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.02);
+  } catch (err) {
+    console.warn('[NeoGuard/alerts] audio indisponible :', err);
+  }
+  updateAudioUi();
+  return isAudioUnlocked();
+}
+
+/** Contexte audio utilisable maintenant (ou null si bloqué). */
+function readyContext() {
+  if (!audioCtx) return null;
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  return audioCtx.state === 'running' ? audioCtx : null;
+}
+
+/** Joue une note avec une enveloppe courte (évite les « clacs »). */
+function tone(ctx, freq, type, start, dur, vol) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, start);
+  gain.gain.setValueAtTime(0, start);
+  gain.gain.linearRampToValueAtTime(vol, start + 0.012);
+  gain.gain.setValueAtTime(vol, start + Math.max(0.013, dur - 0.03));
+  gain.gain.linearRampToValueAtTime(0, start + dur);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(start);
+  osc.stop(start + dur + 0.02);
+}
+
+/** Sonnerie douce unique : sinus 523 Hz puis 659 Hz, volume bas. */
+function playSoftChime() {
+  if (!soundEnabled()) return;
+  const ctx = readyContext();
+  if (!ctx) { updateAudioUi(); return; }
+  const t0 = ctx.currentTime;
+  tone(ctx, 523, 'sine', t0, 0.3, CFG.SOFT_VOLUME);
+  tone(ctx, 659, 'sine', t0 + 0.3, 0.4, CFG.SOFT_VOLUME);
+}
+
+/** Bip-bip fort en boucle : onde carrée ~1000 Hz, 0,25 s son / 0,15 s silence. */
+function startEmergencySound() {
+  if (!soundEnabled() || beepTimer !== null) return;
+  const beep = () => {
+    const ctx = readyContext();
+    if (ctx) tone(ctx, 1000, 'square', ctx.currentTime, CFG.BEEP_ON_S, CFG.BEEP_VOLUME);
+  };
+  beep();
+  beepTimer = setInterval(beep, CFG.BEEP_PERIOD_MS);
+}
+
+function stopEmergencySound() {
+  if (beepTimer !== null) clearInterval(beepTimer);
+  beepTimer = null;
+}
+
+/** Vibration en boucle (si disponible et autorisée). */
+function startVibration() {
+  if (!vibrationEnabled() || vibrateTimer !== null) return;
+  if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+  const buzz = () => { try { navigator.vibrate(250); } catch { /* ignoré */ } };
+  buzz();
+  vibrateTimer = setInterval(buzz, CFG.BEEP_PERIOD_MS);
+}
+
+function stopVibration() {
+  if (vibrateTimer !== null) clearInterval(vibrateTimer);
+  vibrateTimer = null;
+  try { if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(0); } catch { /* ignoré */ }
+}
+
+/**
+ * Affiche (ou retire) l'avertissement « son bloqué » et met à jour le bouton
+ * #btn-enable-audio (attribut data-audio="locked|ready").
+ */
+function updateAudioUi() {
+  if (typeof document === 'undefined') return;
+  const unlocked = isAudioUnlocked();
+  const btn = $('btn-enable-audio');
+  if (btn) btn.setAttribute('data-audio', unlocked ? 'ready' : 'locked');
+
+  const needWarning = soundEnabled() && !unlocked && Boolean(getState().profile);
+  let warn = $('audio-warning');
+  if (needWarning && !warn) {
+    warn = document.createElement('button');
+    warn.id = 'audio-warning';
+    warn.type = 'button';
+    warn.className = 'btn btn-ghost pill';
+    warn.textContent = '🔇 Son bloqué par le navigateur : touchez ici pour activer les alertes sonores';
+    warn.addEventListener('click', () => { unlockAudio(); });
+    const header = $('app-header');
+    if (header && header.parentNode) header.insertAdjacentElement('afterend', warn);
+    else document.body.prepend(warn);
+  } else if (!needWarning && warn) {
+    warn.remove();
+  }
+}
+
+/* ------------------------------ Notifications ------------------------------ */
+
+/**
+ * Demande la permission de notification. À appeler UNIQUEMENT depuis un geste
+ * utilisateur (par ex. quand on active #setting-notifications).
+ * @returns {Promise<"granted"|"denied"|"default"|"unsupported">}
+ */
+async function requestNotificationPermission() {
+  if (typeof Notification === 'undefined') return 'unsupported';
+  if (Notification.permission !== 'default') return Notification.permission;
+  try { return await Notification.requestPermission(); } catch { return Notification.permission; }
+}
+
+/**
+ * Affiche une notification système si autorisée et activée dans les réglages.
+ * Utilise le service worker quand il existe (nécessaire sur mobile).
+ * @returns {Promise<{close:()=>void}|null>}
+ */
+async function showNotification(title, opts) {
+  if (!getState().settings.notifications) return null;
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return null;
+  const full = { lang: 'fr', ...opts };
+  try {
+    const reg = navigator.serviceWorker?.getRegistration ? await navigator.serviceWorker.getRegistration() : null;
+    if (reg && typeof reg.showNotification === 'function') {
+      await reg.showNotification(title, full);
+      return {
+        close() {
+          reg.getNotifications({ tag: full.tag }).then((list) => list.forEach((n) => n.close())).catch(() => {});
+        },
+      };
+    }
+    const n = new Notification(title, full);
+    return { close() { n.close(); } };
+  } catch (err) {
+    console.warn('[NeoGuard/alerts] notification impossible :', err);
+    return null;
+  }
+}
+
+/* ---------------------------------- Toasts --------------------------------- */
+
+/** Zone de texte d'un toast : [data-toast-text] / .toast-text si présent, sinon le toast. */
+function toastSlot(el) {
+  return el.querySelector('[data-toast-text], .toast-text') || el;
+}
+
+function showToast(kind, text, ms) {
+  const el = $(kind === 'reminder' ? 'reminder-toast' : 'vigilance-toast');
+  if (!el) return;
+  toastSlot(el).textContent = text;
+  el.hidden = false;
+  el.classList.remove('is-hidden');
+  clearTimeout(toastTimers[kind]);
+  toastTimers[kind] = setTimeout(() => hideToast(kind), ms);
+}
+
+function hideToast(kind) {
+  clearTimeout(toastTimers[kind]);
+  toastTimers[kind] = null;
+  const el = $(kind === 'reminder' ? 'reminder-toast' : 'vigilance-toast');
+  if (!el) return;
+  el.hidden = true;
+  el.classList.add('is-hidden');
+}
+
+/* ------------------------------ Overlay d'urgence -------------------------- */
+
+/** (Re)construit le contenu de l'overlay ; ne touche pas au DOM si rien n'a changé. */
+function renderEmergency(result) {
+  const title = $('emergency-title');
+  const detail = $('emergency-detail');
+  const name = babyName();
+  const reasons = (result.reasons || []).slice(0, 4);
+  const calmed = result.level !== 'urgence';
+  const soundBlocked = soundEnabled() && !isAudioUnlocked();
+  const key = JSON.stringify([isDemo(), name, reasons, calmed, soundBlocked]);
+  if (key === emergency.renderKey) return;
+  emergency.renderKey = key;
+
+  if (title) title.textContent = `${testPrefix()}URGENCE — vérifiez ${name} maintenant`;
+  if (!detail) return;
+  const nodes = [];
+  const para = (text, strong = false) => {
+    const p = document.createElement(strong ? 'strong' : 'p');
+    p.textContent = text;
+    if (strong) p.style.display = 'block';
+    return p;
+  };
+  if (isDemo()) nodes.push(para("TEST — ceci n'est pas une vraie alerte", true));
+  for (const r of reasons) nodes.push(para(r));
+  if (calmed) {
+    nodes.push(para("La situation semble revenue à la normale. Vérifiez votre bébé, puis appuyez sur « Ça va, j'ai intervenu »."));
+  }
+  if (soundBlocked) nodes.push(para('⚠ Son bloqué par le navigateur : touchez « Activer le son » dans les Réglages.'));
+  detail.replaceChildren(...nodes);
+}
+
+function setOverlayVisible(visible) {
+  const overlay = $('emergency-overlay');
+  if (!overlay) return;
+  overlay.hidden = !visible;
+  overlay.classList.toggle('is-hidden', !visible);
+  overlay.setAttribute('aria-hidden', visible ? 'false' : 'true');
+}
+
+function openEmergency(result, reescalation) {
+  const now = Date.now();
+  hideToast('vigilance');
+  emergency.active = true;
+  emergency.cats = new Set(categorize(result.reasons));
+  emergency.returnFocus = typeof document !== 'undefined' ? document.activeElement : null;
+  emergency.renderKey = '';
+  for (const c of emergency.cats) graceUntil.delete(c);
+  setState({ alertActive: true });
+
+  const overlay = $('emergency-overlay');
+  const samu = $('btn-call-samu');
+  if (samu) samu.setAttribute('href', `tel:${sanitizePhone(getState().settings.emergencyNumber)}`);
+
+  if (overlay) {
+    renderEmergency(result);
+    setOverlayVisible(true);
+    const ok = $('btn-ok-intervened');
+    if (ok) ok.focus({ preventScroll: true });
+  } else {
+    // Dernier recours : l'overlay est absent du HTML, on ne reste jamais silencieux.
+    console.error('[NeoGuard/alerts] #emergency-overlay introuvable');
+    try { window.alert(`${testPrefix()}URGENCE — ${(result.reasons || []).join(' ')}`); } catch { /* ignoré */ }
+  }
+
+  startEmergencySound();
+  startVibration();
+  updateAudioUi();
+
+  showNotification(`${testPrefix()}NeoGuard — URGENCE`, {
+    body: (result.reasons || [])[0] || `Vérifiez ${babyName()} immédiatement.`,
+    tag: 'neoguard-urgence',
+    requireInteraction: true,
+    renotify: true,
+    silent: false,
+  }).then((handle) => {
+    if (emergency.active) emergency.notif = handle; else if (handle) handle.close();
+  });
+
+  record('urgence', result.reasons || [], reescalation ? 'reescalade' : 'overlay-ouvert');
+  void now;
+}
+
+/** Met à jour l'overlay déjà ouvert (raisons à jour, retour au calme). */
+function refreshEmergency(result) {
+  for (const c of categorize(result.reasons)) emergency.cats.add(c);
+  renderEmergency(result);
+}
+
+/** Coupe tout (son, vibration, notification) et ferme l'overlay. */
+function closeEmergency() {
+  stopEmergencySound();
+  stopVibration();
+  if (emergency.notif) { emergency.notif.close(); emergency.notif = null; }
+  setOverlayVisible(false);
+  const back = emergency.returnFocus;
+  emergency.active = false;
+  emergency.returnFocus = null;
+  emergency.renderKey = '';
+  setState({ alertActive: false });
+  if (back && typeof back.focus === 'function' && document.contains(back)) back.focus({ preventScroll: true });
+}
+
+/* ------------------------------ Gestion des niveaux ------------------------ */
+
+/**
+ * Point d'entrée : à appeler une fois par seconde avec le résultat de l'IA
+ * (live ET démo). Gère toasts, sons, overlay, notifications, rappel des 24 h.
+ * @param {{level:string, reasons:string[]}} result sortie de ai.assess()
+ */
+function handleAssessment(result) {
+  if (!result || typeof result !== 'object') return;
+  try {
+    const now = Date.now();
+    const cls = levelClass(result.level);
+
+    if (cls === 2) {
+      if (emergency.active) {
+        refreshEmergency(result);
+      } else {
+        const cats = categorize(result.reasons);
+        const allGraced = cats.every((c) => (graceUntil.get(c) || 0) > now);
+        if (!allGraced) openEmergency(result, cats.some((c) => graceUntil.has(c)));
+      }
+    } else {
+      if (emergency.active) refreshEmergency(result);
+      else if (cls === 1) notifyVigilance(result, now);
+    }
+    checkPatchReminder(now);
+  } catch (err) {
+    console.error('[NeoGuard/alerts] erreur de traitement :', err);
+  }
+}
+
+/** Vigilance : toast + sonnerie douce + notification silencieuse, avec anti-répétition. */
+function notifyVigilance(result, now) {
+  const cats = categorize(result.reasons);
+  const fresh = cats.filter((c) => now - (lastNotifiedAt.get(c) ?? -Infinity) >= options.throttleMs);
+  if (!fresh.length) return;
+  for (const c of cats) lastNotifiedAt.set(c, now);
+
+  const first = (result.reasons || [])[0] || `Restez attentif à ${babyName()}.`;
+  showToast('vigilance', `${testPrefix()}${first}`, CFG.TOAST_VIGILANCE_MS);
+  playSoftChime();
+  showNotification(
+    `${testPrefix()}NeoGuard — ${result.level === 'pathologie-legere' ? 'à surveiller' : 'vigilance'}`,
+    { body: first, tag: 'neoguard-vigilance', silent: true },
+  );
+  record(result.level, result.reasons || [], 'notification');
+}
+
+/* ------------------------------- Rappel des 24 h --------------------------- */
+
+/**
+ * Rappel de changement de la partie collante : une notification douce à 24 h,
+ * puis toutes les 6 h tant que la pose n'a pas été renouvelée. Appelée par
+ * handleAssessment ; à appeler aussi chaque minute si le patch est déconnecté.
+ * @param {number} [now=Date.now()]
+ */
+function checkPatchReminder(now = Date.now()) {
+  const applied = getState().patchAppliedAt;
+  if (!isNum(applied)) return;
+  if (reminder.forPatch !== applied) {
+    reminder.forPatch = applied; // nouvelle pose : on repart de zéro
+    reminder.lastAt = null;
+  }
+  const age = now - applied;
+  if (age < CFG.REMINDER_FIRST_MS) return;
+  if (reminder.lastAt !== null && now - reminder.lastAt < CFG.REMINDER_REPEAT_MS) return;
+  if (emergency.active) return; // pas pendant une urgence : on réessaiera
+
+  reminder.lastAt = now;
+  const hours = Math.floor(age / 3600000);
+  const text = `Pensez à changer la partie collante du patch (posée depuis ${hours} h).`;
+  showToast('reminder', `${testPrefix()}${text}`, CFG.TOAST_REMINDER_MS);
+  playSoftChime();
+  showNotification(`${testPrefix()}NeoGuard — rappel`, { body: text, tag: 'neoguard-rappel', silent: true });
+  record('vigilance', [text], 'rappel-24h');
+}
+
+/* --------------------------- Actions de l'utilisateur ---------------------- */
+
+/** « Ça va, j'ai intervenu » : coupe tout, ferme l'overlay, grâce de 60 s. */
+function onIntervened() {
+  if (!emergency.active) return;
+  const cats = Array.from(emergency.cats);
+  closeEmergency();
+  const until = Date.now() + CFG.GRACE_MS;
+  for (const c of cats) graceUntil.set(c, until);
+  record('urgence', ['Parent intervenu'], 'parent-intervenu');
+}
+
+/** « Appeler SAMU » : href mis à jour au clic ; en démo, aucun appel n'est passé. */
+function onCallSamu(event) {
+  const num = sanitizePhone(getState().settings.emergencyNumber);
+  stopEmergencySound();
+  stopVibration();
+  if (isDemo()) {
+    event.preventDefault(); // SÉCURITÉ : jamais de vrai appel en mode test
+    record('urgence', [`Appel SAMU lancé (simulé : aucun appel passé en mode test)`], 'appel-samu');
+    return;
+  }
+  const link = $('btn-call-samu');
+  if (link) link.setAttribute('href', `tel:${num}`);
+  record('urgence', ['Appel SAMU lancé'], 'appel-samu');
+}
+
+/** « J'ai changé la partie collante » : remet la pose à maintenant. */
+function onPatchChanged() {
+  const now = Date.now();
+  setState({ patchAppliedAt: now });
+  if (typeof options.setSensorPatchAppliedAt === 'function') {
+    try { options.setSensorPatchAppliedAt(now); } catch (e) { console.warn(e); }
+  }
+  if (!isDemo() && typeof options.persistPatchAppliedAt === 'function') {
+    try {
+      Promise.resolve(options.persistPatchAppliedAt(now)).catch((e) =>
+        console.warn('[NeoGuard/alerts] enregistrement de la pose impossible :', e));
+    } catch (e) { console.warn(e); }
+  }
+  reminder.forPatch = now;
+  reminder.lastAt = null;
+  hideToast('reminder');
+  record('normal', ['Partie collante changée'], 'patch-change');
+}
+
+/** Piège le focus dans l'overlay (aria-modal) : Tab alterne entre les 2 boutons. */
+function onOverlayKeydown(event) {
+  if (event.key === 'Escape') { event.preventDefault(); return; } // on ne ferme que par action
+  if (event.key !== 'Tab') return;
+  const items = ['btn-ok-intervened', 'btn-call-samu'].map($).filter(Boolean);
+  if (!items.length) return;
+  const idx = items.indexOf(document.activeElement);
+  const next = event.shiftKey ? (idx <= 0 ? items.length - 1 : idx - 1) : (idx + 1) % items.length;
+  event.preventDefault();
+  items[next].focus();
+}
+
+/* ------------------------------- Initialisation ---------------------------- */
+
+/**
+ * Branche les boutons et prépare les zones d'alerte. À appeler une fois au
+ * démarrage (après le chargement du DOM). Rappeler la fonction ne fait que
+ * mettre à jour les options.
+ *
+ * @param {Object} [opts]
+ * @param {(alert:Object)=>Promise<void>|void} [opts.persistAlert]  enregistre une alerte (appelé en LIVE uniquement)
+ * @param {(epochMs:number)=>Promise<void>|void} [opts.persistPatchAppliedAt] enregistre la pose (LIVE uniquement)
+ * @param {(epochMs:number)=>void} [opts.setSensorPatchAppliedAt]  informe le capteur de la nouvelle pose
+ * @param {number} [opts.throttleMs]  anti-répétition (défaut 120 000 ms)
+ */
+function initAlerts(opts = {}) {
+  options = { ...options, ...opts };
+  if (initialized || typeof document === 'undefined') return;
+  initialized = true;
+
+  // Zones d'annonce pour les lecteurs d'écran.
+  const overlay = $('emergency-overlay');
+  if (overlay) {
+    overlay.setAttribute('aria-live', 'assertive');
+    overlay.setAttribute('role', 'alertdialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.addEventListener('keydown', onOverlayKeydown);
+  }
+  for (const id of ['vigilance-toast', 'reminder-toast']) {
+    const el = $(id);
+    if (!el) continue;
+    el.setAttribute('role', 'status');
+    el.setAttribute('aria-live', 'polite');
+    el.addEventListener('click', () => hideToast(id === 'reminder-toast' ? 'reminder' : 'vigilance'));
+  }
+
+  $('btn-ok-intervened')?.addEventListener('click', onIntervened);
+  $('btn-call-samu')?.addEventListener('click', onCallSamu);
+  $('btn-patch-changed')?.addEventListener('click', onPatchChanged);
+  $('btn-enable-audio')?.addEventListener('click', () => { unlockAudio(); });
+
+  // Premier geste n'importe où : débloque le son sans attendre les Réglages.
+  const gestures = ['click', 'touchend', 'keydown'];
+  const firstGesture = () => {
+    for (const type of gestures) document.removeEventListener(type, firstGesture, true);
+    unlockAudio();
+  };
+  for (const type of gestures) document.addEventListener(type, firstGesture, true);
+
+  // Reprise audio si l'onglet revient au premier plan pendant une urgence.
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && emergency.active) readyContext();
+  });
+
+  // Réglages ou profil modifiés : met à jour l'avertissement « son bloqué ».
+  subscribe((state, prev) => {
+    if (state.settings.sound !== prev.settings.sound || state.profile !== prev.profile) updateAudioUi();
+  });
+
+  setOverlayVisible(false);
+  hideToast('vigilance');
+  hideToast('reminder');
+  updateAudioUi();
+}
+
+/* ------------------------------ Remise à zéro ------------------------------ */
+
+/**
+ * Oublie l'anti-répétition, les périodes de grâce et le rappel 24 h (utile
+ * pour #demo-reset, à l'entrée et à la sortie de la démo).
+ */
+function resetAlertState() {
+  lastNotifiedAt.clear();
+  graceUntil.clear();
+  reminder.forPatch = null;
+  reminder.lastAt = null;
+}
+
+/**
+ * Coupe sons et vibration, ferme l'overlay et les toasts, oublie l'état
+ * d'anti-répétition (sortie de la démo, réinitialisation des données).
+ */
+function stopAllAlerts() {
+  try {
+    stopEmergencySound();
+    stopVibration();
+    if (emergency.active) closeEmergency();
+    else setOverlayVisible(false);
+    hideToast('vigilance');
+    hideToast('reminder');
+    resetAlertState();
+  } catch (err) {
+    console.error('[NeoGuard/alerts] arrêt des alertes :', err);
+  }
+}
+
+return { subscribeAlerts, isAudioUnlocked, unlockAudio, requestNotificationPermission, handleAssessment, checkPatchReminder, initAlerts, resetAlertState, stopAllAlerts };
+})();
+__m.testbench = (function(){
+/**
+ * NeoGuard — banc d'essai (testbench.js)
+ * Branche state / sensors / ai / alerts sur une page de test autonome :
+ * panneau de contrôle, tableau de bord récapitulatif, journal « Attendu / Obtenu ».
+ *
+ * GARANTIE : rien n'est écrit sur l'appareil. Ce fichier n'utilise ni
+ * localStorage ni IndexedDB, et un compteur affiche toute tentative d'écriture.
+ */
+const { getState, setState, setMode, computeAgeMonths } = __m.state;
+const { SimulatedSensor, ECG_SAMPLE_RATE } = __m.sensors;
+const { assess, recordResult, createHistory, markDisconnected, markConnected, getAgeThresholds, getBaselineInfo } = __m.ai;
+const { initAlerts, handleAssessment, subscribeAlerts, stopAllAlerts, resetAlertState, requestNotificationPermission, unlockAudio, checkPatchReminder } = __m.alerts;
+
+/* ------------------------------- Utilitaires ------------------------------ */
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const hhmmss = () => new Date().toLocaleTimeString('fr-FR');
+
+/** Crée un élément DOM (texte toujours via textContent). */
+function el(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') e.className = v;
+    else if (k === 'text') e.textContent = v;
+    else e.setAttribute(k, v);
+  }
+  for (const kid of kids) if (kid != null) e.append(kid);
+  return e;
+}
+
+const LEVEL_LABEL = {
+  normal: 'Tout va bien', vigilance: 'Vigilance',
+  'pathologie-legere': 'À surveiller', urgence: 'URGENCE',
+};
+const LEVEL_COLOR = { normal: '#1E8A5E', vigilance: '#D98E04', 'pathologie-legere': '#6B4FC8', urgence: '#C0392B' };
+const ORI_LABEL = { dos: 'Sur le dos', ventre: 'Sur le ventre', 'cote-gauche': 'Côté gauche', 'cote-droit': 'Côté droit' };
+const ACTION_LABEL = {
+  'overlay-ouvert': 'écran d’urgence affiché', reescalade: 'ré-escalade', notification: 'notification douce',
+  'parent-intervenu': 'parent intervenu', 'appel-samu': 'appel SAMU', 'rappel-24h': 'rappel partie collante',
+  'patch-change': 'partie collante changée',
+};
+
+/* ---------------- Preuve « rien n'est enregistré » (compteur) --------------- */
+let writeAttempts = 0;
+function countWrite() {
+  writeAttempts += 1;
+  const c = $('write-counter');
+  c.textContent = `Écritures sur l'appareil : ${writeAttempts}`;
+  c.classList.add('bad');
+}
+try {
+  for (const m of ['setItem', 'removeItem', 'clear']) {
+    const orig = Storage.prototype[m];
+    Storage.prototype[m] = function patched(...a) { countWrite(); return orig.apply(this, a); };
+  }
+  if (window.indexedDB && typeof indexedDB.open === 'function') {
+    const open = indexedDB.open.bind(indexedDB);
+    indexedDB.open = (...a) => { countWrite(); return open(...a); };
+  }
+} catch { /* sans importance : le compteur reste à 0 */ }
+
+/* --------------------------------- Session -------------------------------- */
+const S = {
+  sensor: null, history: null, startedAt: 0,
+  series: [], levelSecs: {}, alerts: { vigilance: 0, urgence: 0 },
+  frame: null, result: null, forced: {}, scenario: null, unsub: [],
+  tickTimer: null,
+};
+
+const SCENARIOS = {
+  normal: { label: 'Normal', expected: 'normal', minWait: 8, wait: 14, apply: () => {} },
+  'sommeil-agite': { label: 'Sommeil agité', expected: 'normal', sleep: 'agite', minWait: 8, wait: 30, apply: () => force('motion', 80) },
+  'vigilance-tachycardie': { label: 'Tachycardie', expected: 'vigilance', wait: 20, apply: () => force('hr', 175) },
+  'vigilance-respiration-rapide': { label: 'Respiration rapide', expected: 'vigilance', wait: 20, apply: () => force('rr', 60) },
+  'apnee-urgence': { label: 'Apnée 25 s', expected: 'urgence', wait: 40, apply: () => S.sensor.setOverrides({ apnea: 25 }) },
+  'bradycardie-urgence': { label: 'Bradycardie', expected: 'urgence', wait: 30, apply: () => force('hr', 70) },
+  'ventre-urgence': { label: 'Sur le ventre', expected: 'urgence', wait: 55, apply: () => setOrientation('ventre') },
+  'patch-deconnecte': { label: 'Patch déconnecté', expected: 'vigilance', wait: 80, apply: () => setConnected(false) },
+  'rappel-24h': { label: 'Rappel 24 h', expectedAction: 'rappel-24h', wait: 8, apply: () => setPatchHours(24.5) },
+};
+
+/** Ajoute une ligne au journal (la plus récente en haut). */
+function log(text, kind = '') {
+  const li = el('li', { class: kind }, el('time', { text: hhmmss() }), document.createTextNode(text));
+  const ul = $('demo-log');
+  ul.prepend(li);
+  while (ul.children.length > 120) ul.lastChild.remove();
+}
+
+/* -------------------------- Pilotage du capteur --------------------------- */
+function force(key, value) {
+  S.forced[key] = true;
+  S.sensor.setOverrides({ [key]: value });
+  const input = $(`demo-${key}`);
+  input.value = String(value);
+  $(`ctrl-${key}`).classList.add('forced');
+  $(`out-${key}`).textContent = String(value);
+}
+function release(key) {
+  delete S.forced[key];
+  S.sensor.setOverrides({ [key]: null });
+  $(`ctrl-${key}`).classList.remove('forced');
+}
+function setOrientation(value) {
+  S.sensor.setOverrides({ orientation: value || null });
+  const r = document.querySelector(`input[name="demo-orientation"][value="${value || ''}"]`);
+  if (r) r.checked = true;
+}
+function setConnected(on) {
+  S.sensor.setOverrides({ patchConnected: on ? null : false });
+  $('demo-patch-connected').checked = on;
+}
+function setPatchHours(h) {
+  const applied = Date.now() - h * 3600e3;
+  setState({ patchAppliedAt: applied });
+  if (S.sensor) S.sensor.setPatchAppliedAt(applied);
+  resetAlertState();
+  $('demo-patch-hours').value = String(h);
+  $('out-patch').textContent = String(h);
+}
+
+/** Remet tous les paramètres de test à « automatique ». */
+function clearAll() {
+  S.sensor.setOverrides(null);
+  S.forced = {};
+  for (const k of ['hr', 'rr', 'motion']) $(`ctrl-${k}`).classList.remove('forced');
+  setOrientation('');
+  $('demo-patch-connected').checked = true;
+  $('demo-arrhythmia').checked = false;
+  setPatchHours(0);
+  stopAllAlerts();
+  // Oublie les mesures et verdicts récents (sinon l'anti-clignotement de 30 s
+  // rouvrirait l'écran d'urgence juste après la remise à zéro). La baseline reste.
+  S.history.frames.length = 0;
+  S.history.assessments.length = 0;
+  S.history._acc = null;
+  ecgQueue.length = 0;
+  S.scenario = null;
+}
+
+/**
+ * Simule un bébé déjà sur le ventre depuis plus de 30 s : précharge 31 s de
+ * frames « ventre » puis évalue tout de suite, pour que la règle d'urgence
+ * (> 30 s) se déclenche immédiatement au lieu d'une simple vigilance.
+ * Utilisé par le scénario « Sur le ventre » ET par le bouton radio « ventre ».
+ */
+function preloadVentre() {
+  if (!S.sensor || !S.history) return;
+  const startedAt = Date.now();
+  const base = S.sensor.getLastFrame() || S.frame || {};
+  for (let secondsAgo = 31; secondsAgo >= 1; secondsAgo -= 1) {
+    S.history.frames.push({
+      ...base,
+      t: startedAt - secondsAgo * 1000,
+      orientation: 'ventre',
+      motion: 5,
+      patchConnected: true,
+    });
+  }
+  const frame = { ...base, t: startedAt, orientation: 'ventre', motion: 5, patchConnected: true };
+  const result = assess(frame, getState().profile, S.history);
+  recordResult(S.history, frame, result);
+  afterResult(frame, result);
+}
+
+function runScenario(name) {
+  const sc = SCENARIOS[name];
+  if (!sc || !S.sensor) return;
+  clearAll();
+  sc.apply();
+  const startedAt = Date.now();
+  S.scenario = { name, sc, start: startedAt, done: false };
+
+  if (name === 'ventre-urgence') preloadVentre();
+
+  const exp = sc.expectedAction
+    ? `rappel « changer la partie collante »`
+    : `niveau ${sc.expected}${sc.sleep ? ' + sommeil agité' : ''}`;
+  log(`▶ Scénario « ${sc.label} » — Attendu : ${exp} (jusqu'à ${sc.wait} s).`);
+}
+
+/** Vérifie si le scénario en cours a abouti (ou échoué) ; écrit « Attendu / Obtenu ». */
+function checkScenario(result, alert) {
+  const s = S.scenario;
+  if (!s || s.done) return;
+  const sc = s.sc;
+  const elapsed = (Date.now() - s.start) / 1000;
+  const first = (result && result.reasons && result.reasons[0]) || '';
+  const finish = (ok, text) => { s.done = true; log(text, ok ? 'ok' : 'ko'); };
+
+  if (sc.expectedAction) {
+    if (alert && alert.action === sc.expectedAction) finish(true, `✔ Attendu : rappel affiché. Obtenu : rappel affiché (partie collante à ${((Date.now() - getState().patchAppliedAt) / 3.6e6).toFixed(1)} h).`);
+    else if (elapsed > sc.wait) finish(false, '✖ Attendu : rappel affiché. Obtenu : aucun rappel.');
+    return;
+  }
+  if (!result) return;
+  const levelOk = result.level === sc.expected && (!sc.sleep || result.sleep === sc.sleep);
+  if (levelOk && elapsed >= (sc.minWait || 0)) {
+    finish(true, `✔ Attendu : ${sc.expected}. Obtenu : ${result.level}${sc.sleep ? ` (sommeil ${result.sleep})` : ''} — ${first}`);
+  } else if (elapsed > sc.wait) {
+    finish(false, `✖ Attendu : ${sc.expected}. Obtenu : ${result.level}${sc.sleep ? ` (sommeil ${result.sleep})` : ''} — ${first}`);
+  }
+}
+
+/* ------------------------------ Boucle de test ----------------------------- */
+function profileFromForm() {
+  return {
+    firstName: $('baby-firstname').value.trim() || 'Bébé',
+    birthdate: $('baby-birthdate').value,
+    sex: 'fille',
+    riskPregnancy: $('risk-pregnancy').checked,
+    familyHistory: '',
+  };
+}
+
+function startSession() {
+  const profile = profileFromForm();
+  const age = computeAgeMonths(profile.birthdate);
+  const msg = $('profile-msg');
+  if (age === null) { msg.textContent = 'Date de naissance invalide ou dans le futur.'; return false; }
+  if (age > 24) { msg.textContent = 'Le banc d’essai couvre 0 à 24 mois.'; return false; }
+  msg.textContent = '';
+
+  // Arrêt de la session précédente.
+  if (S.sensor) S.sensor.stop();
+  S.unsub.forEach((u) => u());
+  S.unsub = [];
+  clearInterval(S.tickTimer);
+  stopAllAlerts();
+
+  const thr = getAgeThresholds(age);
+  const baseHr = Math.round((thr.hr[0] + thr.hr[1]) / 2 + 5);
+  const baseRr = Math.round((thr.rr[0] + thr.rr[1]) / 2 + 3);
+
+  const now = Date.now();
+  setState({ profile, patchAppliedAt: now, latestFrame: null, latestAssessment: null });
+  S.sensor = new SimulatedSensor({ baseHr, baseRr, patchAppliedAt: now });
+  S.history = createHistory();
+  S.startedAt = now;
+  S.series = [];
+  S.levelSecs = { normal: 0, vigilance: 0, 'pathologie-legere': 0, urgence: 0 };
+  S.alerts = { vigilance: 0, urgence: 0 };
+  S.frame = null; S.result = null; S.forced = {}; S.scenario = null;
+  ecgQueue.length = 0; ecgBuf.fill(0);
+  for (const k of ['hr', 'rr', 'motion']) $(`ctrl-${k}`).classList.remove('forced');
+  setOrientation(''); $('demo-patch-connected').checked = true; $('demo-arrhythmia').checked = false;
+  $('demo-patch-hours').value = '0'; $('out-patch').textContent = '0';
+
+  $('baby-name').textContent = profile.firstName;
+  $('baby-age').textContent = `${age} mois`;
+  $('age-line').textContent = `Âge déduit : ${age} mois — seuils : FC ${thr.hr[0]}–${thr.hr[1]} bpm, respiration ${thr.rr[0]}–${thr.rr[1]} /min.`;
+
+  S.unsub.push(S.sensor.onFrame(onFrame));
+  S.unsub.push(S.sensor.on('disconnected', () => {
+    markDisconnected(S.history, Date.now());
+    setPatchState(false);
+    log('📡 Patch déconnecté : plus de mesures.');
+  }));
+  S.unsub.push(S.sensor.on('connected', () => {
+    markConnected(S.history);
+    setPatchState(true);
+    log('📡 Patch reconnecté.');
+  }));
+
+  // Pendant une déconnexion, il n'y a plus de frames : on évalue chaque seconde.
+  S.tickTimer = setInterval(() => {
+    if (S.sensor.isConnected()) return;
+    const f = { t: Date.now(), patchConnected: false };
+    const r = assess(f, getState().profile, S.history);
+    recordResult(S.history, f, r);
+    afterResult(null, r);
+  }, 1000);
+
+  S.sensor.start();
+  log(`Nouvelle session de test : ${profile.firstName}, ${age} mois${profile.riskPregnancy ? ', profil à risque' : ''}.`);
+  render();
+  return true;
+}
+
+function setPatchState(connected) {
+  $('patch-status').setAttribute('data-state', connected ? 'connected' : 'disconnected');
+  $('patch-status-label').textContent = connected ? 'Patch connecté' : 'Patch déconnecté';
+}
+
+function onFrame(frame) {
+  const result = assess(frame, getState().profile, S.history);
+  recordResult(S.history, frame, result);
+  afterResult(frame, result);
+}
+
+/** Traitement commun à chaque seconde (avec ou sans frame). */
+function afterResult(frame, result) {
+  S.result = result;
+  if (frame) {
+    S.frame = frame;
+    for (const s of frame.ecg) ecgQueue.push(s);
+    if (ecgQueue.length > 400) ecgQueue.splice(0, ecgQueue.length - 400);
+  }
+  S.levelSecs[result.level] = (S.levelSecs[result.level] || 0) + 1;
+  S.series.push({ t: Date.now(), hr: frame ? frame.hr : null, rr: frame ? frame.rr : null, score: result.score, level: result.level });
+  if (S.series.length > 900) S.series.shift();
+
+  setState({ latestFrame: frame || getState().latestFrame, latestAssessment: result });
+  handleAssessment(result);
+  checkScenario(result, null);
+  render();
+}
+
+/* --------------------------------- Rendu ---------------------------------- */
+function trailing(pred) {
+  const fr = S.history.frames;
+  let n = 0;
+  for (let i = fr.length - 1; i >= 0; i--) { if (!pred(fr[i])) break; n++; }
+  return n;
+}
+
+function render() {
+  const r = S.result;
+  const f = S.frame;
+  if (!r) return;
+
+  // État
+  const badge = $('risk-badge');
+  badge.setAttribute('data-level', r.level);
+  badge.textContent = LEVEL_LABEL[r.level];
+  $('score-text').firstChild.textContent = ` score ${r.score} / 100 · confiance `;
+  $('confidence').textContent = r.confidence || 'faible';
+  const fill = $('score-fill');
+  fill.style.width = `${clamp(r.score, 0, 100)}%`;
+  fill.style.background = LEVEL_COLOR[r.level];
+  $('risk-reasons').replaceChildren(...(r.reasons || []).map((t) => el('li', { text: t })));
+
+  // Mesures
+  if (f) {
+    $('hr-value').textContent = f.hr;
+    $('rr-value').textContent = f.rr;
+    const o = $('orientation-value');
+    o.textContent = ORI_LABEL[f.orientation] || f.orientation;
+    o.setAttribute('data-orientation', f.orientation);
+    for (const [k, v] of [['hr', f.hr], ['rr', f.rr], ['motion', f.motion]]) {
+      $(`out-${k}`).textContent = String(v);
+      if (!S.forced[k]) $(`demo-${k}`).value = String(v);
+    }
+  } else {
+    $('hr-value').textContent = '—'; $('rr-value').textContent = '—';
+  }
+  const sl = $('sleep-value');
+  sl.setAttribute('data-sleep', r.sleep);
+  sl.textContent = { calme: 'Calme', agite: 'Agité', inconnu: 'Inconnu' }[r.sleep] || r.sleep;
+  const applied = getState().patchAppliedAt;
+  $('patch-age').textContent = applied ? ((Date.now() - applied) / 3.6e6).toFixed(1) : '0.0';
+
+  const pauseS = trailing((x) => x.rr < 1);
+  const pb = $('pause-badge');
+  pb.hidden = pauseS < 3;
+  pb.textContent = `pause ${pauseS} s`;
+
+  renderExplain(f, r, pauseS);
+  renderSummary();
+  drawSession();
+}
+
+function renderExplain(f, r, pauseS) {
+  const box = $('demo-explain');
+  const info = getBaselineInfo(S.history, getState().profile, Date.now());
+  const rows = [];
+  const verdict = (v, lo, hi) => (v == null ? ['—', ''] : v > hi ? ['au-dessus', 'v-high'] : v < lo ? ['en dessous', 'v-low'] : ['dans la plage', 'v-ok']);
+
+  const mk = (label, v, unit, band) => {
+    const [txt, cls] = verdict(v, band.low, band.high);
+    return el('tr', {}, el('td', { text: label }), el('td', { text: v == null ? '—' : `${v} ${unit}` }),
+      el('td', { text: `${Math.round(band.low)} – ${Math.round(band.high)} ${unit}` }), el('td', { class: cls, text: txt }));
+  };
+  rows.push(mk('Rythme cardiaque', f ? f.hr : null, 'bpm', info.hr));
+  rows.push(mk('Respiration', f ? f.rr : null, '/min', info.rr));
+
+  const ventreS = trailing((x) => x.orientation === 'ventre');
+  rows.push(el('tr', {}, el('td', { text: 'Pause respiratoire' }), el('td', { text: `${pauseS} s` }),
+    el('td', { text: 'vigilance dès 15 s, urgence dès 20 s' }),
+    el('td', { class: pauseS >= 20 ? 'v-high' : pauseS >= 15 ? 'v-low' : 'v-ok', text: pauseS >= 20 ? 'urgence' : pauseS >= 15 ? 'vigilance' : 'ok' })));
+  rows.push(el('tr', {}, el('td', { text: 'Sur le ventre' }), el('td', { text: f && f.orientation === 'ventre' ? `${ventreS} s` : 'non' }),
+    el('td', { text: 'vigilance, urgence après 30 s' }),
+    el('td', { class: ventreS > 30 ? 'v-high' : ventreS > 0 ? 'v-low' : 'v-ok', text: ventreS > 30 ? 'urgence' : ventreS > 0 ? 'vigilance' : 'ok' })));
+
+  const baseTxt = info.active
+    ? `Baseline personnelle active (${info.count} mesures de sommeil calme) : les plages ci-dessus sont celles de ${getState().profile.firstName}, ramenées dans les limites de son âge.`
+    : `Baseline en cours d'apprentissage (${info.count}/60 mesures de sommeil calme, environ 1 h) : plages = seuils de l'âge (${info.ageMonths} mois). Confiance faible.`;
+
+  box.replaceChildren(
+    el('p', { class: 'muted small', text: baseTxt }),
+    el('table', {}, el('thead', {}, el('tr', {}, ...['Mesure', 'Valeur actuelle', 'Plage normale', 'Verdict'].map((t) => el('th', { text: t })))), el('tbody', {}, ...rows)),
+    el('p', { class: 'small muted', text: 'Le niveau suit la médiane des 5 dernières mesures (≈ 3 s de latence) ; les règles dures (pause, bradycardie, ventre) sont exactes à la seconde. Après une urgence, le niveau est maintenu 30 s par prudence.' }),
+  );
+}
+
+function renderSummary() {
+  const mins = Math.floor((Date.now() - S.startedAt) / 60000);
+  const secs = Math.floor(((Date.now() - S.startedAt) % 60000) / 1000);
+  $('session-line').textContent = `Durée : ${mins} min ${secs} s · alertes de vigilance : ${S.alerts.vigilance} · urgences : ${S.alerts.urgence}`;
+
+  const stat = (key) => {
+    const v = S.series.map((p) => p[key]).filter((x) => x != null);
+    if (!v.length) return ['—', '—', '—'];
+    return [Math.min(...v), Math.round(v.reduce((a, b) => a + b, 0) / v.length), Math.max(...v)];
+  };
+  const mk = (label, key, unit) => {
+    const [a, b, c] = stat(key);
+    return el('tr', {}, el('td', { text: label }), el('td', { text: `${a} ${unit}` }), el('td', { text: `${b} ${unit}` }), el('td', { text: `${c} ${unit}` }));
+  };
+  $('stats-body').replaceChildren(mk('Rythme cardiaque', 'hr', 'bpm'), mk('Respiration', 'rr', '/min'), mk('Score de risque', 'score', '/100'));
+
+  const total = Object.values(S.levelSecs).reduce((a, b) => a + b, 0) || 1;
+  const parts = ['normal', 'vigilance', 'pathologie-legere', 'urgence'];
+  $('lvlbar').replaceChildren(...parts.map((l) => { const i = el('i', { class: `l-${l}` }); i.style.width = `${(S.levelSecs[l] / total) * 100}%`; return i; }));
+  $('lvl-text').textContent = parts.map((l) => `${LEVEL_LABEL[l]} ${Math.round((S.levelSecs[l] / total) * 100)} %`).join(' · ');
+}
+
+/* ------------------------------- Graphiques ------------------------------- */
+function fit(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(100, canvas.clientWidth);
+  const h = Math.max(40, canvas.clientHeight);
+  if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+  }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  return { ctx, w, h };
+}
+function grid(ctx, w, h, step = 28) {
+  ctx.strokeStyle = 'rgba(120,100,80,.12)'; ctx.lineWidth = 1; ctx.beginPath();
+  for (let x = 0; x < w; x += step) { ctx.moveTo(x, 0); ctx.lineTo(x, h); }
+  for (let y = 0; y < h; y += step) { ctx.moveTo(0, y); ctx.lineTo(w, y); }
+  ctx.stroke();
+}
+
+const ECG_LEN = ECG_SAMPLE_RATE * 8;
+const ecgBuf = new Float32Array(ECG_LEN);
+const ecgQueue = [];
+const RESP_HZ = 50;
+const respBuf = new Float32Array(RESP_HZ * 8);
+let respPhase = 0; let respAmp = 0.5; let respCarry = 0; let ecgCarry = 0;
+let lastRaf = 0;
+
+function liveLoop(ts) {
+  const dt = Math.min(0.2, lastRaf ? (ts - lastRaf) / 1000 : 0.016);
+  lastRaf = ts;
+  if (!document.hidden) {
+    // ECG : on rejoue les échantillons à 125 Hz (≈ 1 s de retard, tracé continu).
+    ecgCarry += dt * ECG_SAMPLE_RATE;
+    let n = Math.floor(ecgCarry); ecgCarry -= n;
+    if (ecgQueue.length > 250) n += Math.floor((ecgQueue.length - 250) / 4); // rattrapage doux
+    n = Math.min(n, ecgQueue.length);
+    if (n > 0) { ecgBuf.copyWithin(0, n); for (let i = 0; i < n; i++) ecgBuf[ECG_LEN - n + i] = ecgQueue.shift(); }
+
+    // Respiration : onde dont la fréquence suit RR, l'amplitude suit le mouvement.
+    const f = S.frame;
+    const rr = f ? f.rr : 0;
+    const targetAmp = rr < 1 ? 0 : 0.35 + 0.5 * clamp((f?.motion ?? 5) / 100, 0, 1);
+    respAmp += (targetAmp - respAmp) * Math.min(1, dt * 3);
+    respCarry += dt * RESP_HZ;
+    const m = Math.floor(respCarry); respCarry -= m;
+    for (let i = 0; i < m; i++) {
+      respPhase += (2 * Math.PI * rr) / 60 / RESP_HZ;
+      respBuf.copyWithin(0, 1);
+      respBuf[respBuf.length - 1] = Math.sin(respPhase) * respAmp + (rr >= 1 ? Math.sin(respPhase * 2.7) * 0.04 : 0);
+    }
+    drawLive();
+  }
+  requestAnimationFrame(liveLoop);
+}
+
+function drawLive() {
+  const color = LEVEL_COLOR[S.result ? S.result.level : 'normal'];
+  { // ECG
+    const { ctx, w, h } = fit($('chart-ecg'));
+    grid(ctx, w, h);
+    ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.lineJoin = 'round'; ctx.beginPath();
+    for (let i = 0; i < ECG_LEN; i++) {
+      const x = (i / (ECG_LEN - 1)) * w;
+      const y = h - 8 - ((ecgBuf[i] + 0.35) / 1.55) * (h - 16);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  { // Respiration
+    const { ctx, w, h } = fit($('chart-resp'));
+    grid(ctx, w, h);
+    ctx.strokeStyle = '#1B8C84'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.beginPath();
+    for (let i = 0; i < respBuf.length; i++) {
+      const x = (i / (respBuf.length - 1)) * w;
+      const y = h / 2 - respBuf[i] * (h / 2 - 10);
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+}
+
+/** Courbe d'historique : zone normale claire, ligne, valeur actuelle. */
+function drawSeries(canvasId, key, min, max, color, band) {
+  const { ctx, w, h } = fit($(canvasId));
+  const padL = 34;
+  const X = (i, n) => padL + (n <= 1 ? 0 : (i / (n - 1)) * (w - padL - 6));
+  const Y = (v) => h - 6 - ((clamp(v, min, max) - min) / (max - min)) * (h - 12);
+  ctx.font = '11px system-ui'; ctx.fillStyle = '#5E6378';
+  ctx.fillText(String(max), 2, 12); ctx.fillText(String(min), 2, h - 4);
+  if (band) {
+    ctx.fillStyle = 'rgba(30,138,94,.13)';
+    ctx.fillRect(padL, Y(band[1]), w - padL - 6, Y(band[0]) - Y(band[1]));
+  }
+  const pts = S.series;
+  if (!pts.length) { ctx.fillStyle = '#5E6378'; ctx.fillText('Pas encore de données', padL + 8, h / 2); return; }
+  ctx.strokeStyle = color; ctx.lineWidth = 1.8; ctx.beginPath();
+  let started = false;
+  pts.forEach((p, i) => {
+    const v = p[key];
+    if (v == null) { started = false; return; }
+    const x = X(i, pts.length); const y = Y(v);
+    if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+  // Zones de niveau (barre fine en bas pour le score)
+  if (key === 'score') {
+    pts.forEach((p, i) => {
+      ctx.fillStyle = LEVEL_COLOR[p.level];
+      const x = X(i, pts.length);
+      ctx.fillRect(x, h - 4, Math.max(1, (w - padL) / pts.length), 4);
+    });
+  }
+}
+function drawSession() {
+  const info = getBaselineInfo(S.history, getState().profile, Date.now());
+  drawSeries('chart-s-hr', 'hr', 40, 220, '#2F6FB0', [info.hr.low, info.hr.high]);
+  drawSeries('chart-s-rr', 'rr', 0, 90, '#1B8C84', [info.rr.low, info.rr.high]);
+  drawSeries('chart-s-risk', 'score', 0, 100, '#C0392B', null);
+}
+
+/* ----------------------------- Branchement UI ----------------------------- */
+function wire() {
+  for (const k of ['hr', 'rr', 'motion']) {
+    $(`demo-${k}`).addEventListener('input', (e) => force(k, Number(e.target.value)));
+  }
+  document.querySelectorAll('[data-release]').forEach((b) => b.addEventListener('click', () => release(b.dataset.release)));
+  document.querySelectorAll('input[name="demo-orientation"]').forEach((r) => r.addEventListener('change', () => {
+    setOrientation(r.value);
+    if (r.value === 'ventre') preloadVentre();
+  }));
+  $('demo-patch-connected').addEventListener('change', (e) => setConnected(e.target.checked));
+  $('demo-arrhythmia').addEventListener('change', (e) => S.sensor.setOverrides({ arrhythmia: e.target.checked }));
+  $('demo-patch-hours').addEventListener('input', (e) => setPatchHours(Number(e.target.value)));
+  $('btn-patch-changed').addEventListener('click', () => {
+    $('demo-patch-hours').value = '0'; $('out-patch').textContent = '0';
+  });
+  document.querySelectorAll('[data-scenario]').forEach((b) => b.addEventListener('click', () => runScenario(b.dataset.scenario)));
+  $('demo-reset').addEventListener('click', () => { clearAll(); log('↺ Tout remis à normal.'); });
+  $('profile-form').addEventListener('submit', (e) => { e.preventDefault(); startSession(); });
+
+  $('setting-sound').addEventListener('change', (e) => setState({ settings: { sound: e.target.checked } }));
+  $('setting-vibration').addEventListener('change', (e) => setState({ settings: { vibration: e.target.checked } }));
+  $('setting-notifications').addEventListener('change', async (e) => {
+    if (e.target.checked) {
+      const perm = await requestNotificationPermission();
+      if (perm !== 'granted') { e.target.checked = false; log('Notifications refusées ou indisponibles dans ce navigateur.'); return; }
+    }
+    setState({ settings: { notifications: e.target.checked } });
+  });
+}
+
+/* --------------------------------- Démarrage ------------------------------- */
+function boot() {
+  try {
+    setMode('demo');
+    const d = new Date(); d.setMonth(d.getMonth() - 4);
+    $('baby-birthdate').value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    initAlerts({ setSensorPatchAppliedAt: (t) => S.sensor && S.sensor.setPatchAppliedAt(t) });
+    subscribeAlerts((a) => {
+      if (a.source !== 'demo') return;
+      if (a.action === 'notification' || a.action === 'overlay-ouvert' || a.action === 'reescalade') {
+        if (a.level === 'urgence') S.alerts.urgence += 1; else S.alerts.vigilance += 1;
+      }
+      const act = ACTION_LABEL[a.action] || a.action;
+      const reason = a.reasons[0] || '';
+      const kind = a.level === 'normal' ? '' : `alert-${a.level}`;
+      log(`🔔 [TEST] ${a.level === 'normal' ? 'info' : a.level} — ${act}${reason ? ` : ${reason}` : ''}`, kind);
+      checkScenario(S.result, a);
+    });
+    wire();
+    startSession();
+    requestAnimationFrame(liveLoop);
+    window.addEventListener('resize', () => { drawLive(); drawSession(); });
+    window.neoguardTest = { S, runScenario, clearAll };
+  } catch (err) {
+    console.error(err);
+    document.body.prepend(el('pre', { text: `Erreur de démarrage du banc d'essai : ${err && err.message}` }));
+  }
+}
+boot();
+
+return {  };
+})();
+})();
+</script>
+</body>
+</html>

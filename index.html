@@ -1,0 +1,487 @@
+<!doctype html>
+<!--
+  NeoGuard — index.html
+  Application mobile (HTML/CSS/JS vanilla, 100 % hors ligne) accompagnant le patch intelligent.
+  Contrat commun HTML / CSS / JS : ne renommer AUCUN identifiant.
+  Texte de positionnement : NeoGuard est une « aide à la surveillance ».
+-->
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FFF8F0">
+  <meta name="description" content="NeoGuard : aide à la surveillance de bébé avec patch intelligent.">
+  <title>NeoGuard — aide à la surveillance de bébé</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="assets/icons/logo-icon-192.png">
+
+  <!-- Polices Nunito (texte) et Fredoka (titres). Hors ligne, le CSS prévoit un repli system-ui. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&family=Nunito:wght@400;600;700;800&display=swap">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<!-- data-mode : "live" (données enregistrées) ou "demo" (rien n'est enregistré). data-theme : "day" ou "night". -->
+<body data-mode="live" data-theme="day">
+
+  <!-- ===================== EN-TÊTE FIXE ===================== -->
+  <!-- Visible dès que le profil existe (le JS retire l'attribut hidden). -->
+  <header id="app-header" hidden>
+    <div class="header-row">
+      <div class="header-baby">
+        <!-- Le prénom du bébé reste TOUJOURS en haut -->
+        <h1 id="baby-name" class="header-name">Bébé</h1>
+        <span id="baby-age" class="header-age">0 mois</span>
+      </div>
+      <!-- Pastille de statut du patch : verte clignotante si connecté, rouge si déconnecté -->
+      <div id="patch-status" data-state="disconnected" role="status" aria-live="polite">
+        <span class="status-dot blink-red" aria-hidden="true"></span>
+        <span id="patch-status-label">Patch déconnecté</span>
+      </div>
+    </div>
+    <!-- Bandeau permanent affiché uniquement en mode démo -->
+    <div id="demo-banner" role="note" hidden>MODE TEST — rien n'est enregistré</div>
+  </header>
+
+  <main id="app-main">
+
+    <!-- ===================== ÉCRAN 1 : ONBOARDING ===================== -->
+    <section id="screen-onboarding" aria-labelledby="onboarding-title">
+      <div class="card">
+        <h2 id="onboarding-title">Bienvenue sur NeoGuard: La sérénité pour les parents, La sécurité pour bébé</h2>
+        <p>Pour que NeoGuard connaisse bien votre bébé, prenez une minute pour remplir son profil.
+           Vous gardez la main : tout reste sur votre téléphone.</p>
+        <p class="muted">NeoGuard est une <strong>aide à la surveillance</strong> : il ne remplace ni votre
+           vigilance parentale ni le suivi médical. Merci!</p>
+        <button type="button" id="btn-enter-demo" class="btn btn-ghost">Tester l'application sans enregistrer</button>
+      </div>
+
+      <form id="profile-form" class="card" novalidate>
+        <div class="field">
+          <label for="baby-firstname">Prénom du bébé</label>
+          <input type="text" id="baby-firstname" name="firstname" autocomplete="off" required
+                 aria-describedby="err-firstname">
+          <p id="err-firstname" class="field-error" role="alert" hidden></p>
+        </div>
+
+        <div class="field">
+          <label for="baby-birthdate">Date de naissance</label>
+          <!-- L'attribut max (= aujourd'hui) est renseigné par le JS -->
+          <input type="date" id="baby-birthdate" name="birthdate" required
+                 aria-describedby="err-birthdate">
+          <p id="err-birthdate" class="field-error" role="alert" hidden></p>
+        </div>
+
+        <div class="field">
+          <span class="field-label">Âge calculé</span>
+          <!-- Âge en mois déduit automatiquement (lecture seule) -->
+          <output id="baby-age-months" for="baby-birthdate">—</output>
+        </div>
+
+        <fieldset class="field" aria-describedby="err-sex">
+          <legend>Sexe</legend>
+          <div class="radio-row">
+            <label class="radio-pill"><input type="radio" name="sex" value="fille"> <span>Fille</span></label>
+            <label class="radio-pill"><input type="radio" name="sex" value="garcon"> <span>Garçon</span></label>
+          </div>
+          <p id="err-sex" class="field-error" role="alert" hidden></p>
+        </fieldset>
+
+        <div class="field">
+          <label class="check-row" for="risk-pregnancy">
+            <input type="checkbox" id="risk-pregnancy" name="risk-pregnancy">
+            <span>Grossesse à risques</span>
+          </label>
+        </div>
+
+        <div class="field">
+          <label for="family-history">Antécédents familiaux et remarques médicales</label>
+          <textarea id="family-history" name="family-history" rows="4"
+                    placeholder="Ex. : prématurité, apnée du sommeil dans la famille… Touchez un exemple ci-dessous pour l'ajouter."
+                    aria-describedby="history-help"></textarea>
+          <p id="history-help" class="muted small">Facultatif. Ces informations aident l'assistant à rester plus attentif.</p>
+          <!-- Pastilles d'exemples : un clic ajoute le texte dans le textarea -->
+          <div class="chip-row" role="group" aria-label="Exemples à ajouter">
+            <button type="button" class="chip" data-example="Mort subite du nourrisson dans la famille">Mort subite du nourrisson dans la famille</button>
+            <button type="button" class="chip" data-example="Prématurité (< 37 semaines)">Prématurité (&lt; 37 semaines)</button>
+            <button type="button" class="chip" data-example="Apnée du sommeil">Apnée du sommeil</button>
+            <button type="button" class="chip" data-example="Maladie cardiaque congénitale">Maladie cardiaque congénitale</button>
+            <button type="button" class="chip" data-example="Épilepsie">Épilepsie</button>
+            <button type="button" class="chip" data-example="Asthme ou allergies sévères">Asthme ou allergies sévères</button>
+            <button type="button" class="chip" data-example="Diabète gestationnel">Diabète gestationnel</button>
+            <button type="button" class="chip" data-example="Tabagisme pendant la grossesse">Tabagisme pendant la grossesse</button>
+            <button type="button" class="chip" data-example="Petit poids de naissance">Petit poids de naissance</button>
+            <button type="button" class="chip" data-example="Reflux gastro-œsophagien sévère">Reflux gastro-œsophagien sévère</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="check-row" for="consent-check">
+            <input type="checkbox" id="consent-check" name="consent" required aria-describedby="err-consent">
+            <span>Je comprends que NeoGuard est une aide à la surveillance et ne remplace pas ma vigilance.</span>
+          </label>
+          <p id="err-consent" class="field-error" role="alert" hidden></p>
+        </div>
+
+        <div class="field audio-field">
+          <!-- Les navigateurs exigent un geste de l'utilisateur pour autoriser le son -->
+          <button type="button" id="btn-enable-audio" class="btn btn-ghost">Activer le son des alertes</button>
+          <p class="muted small">Votre navigateur n'autorise le son qu'après un geste de votre part.
+             Touchez ce bouton une fois pour que les alertes sonores puissent fonctionner.</p>
+        </div>
+
+        <button type="submit" id="profile-save" class="btn btn-primary">Enregistrer le profil</button>
+      </form>
+    </section>
+
+    <!-- ===================== ÉCRAN 2 : TABLEAU DE BORD ===================== -->
+    <section id="screen-dashboard" aria-labelledby="dashboard-title" hidden>
+      <h2 id="dashboard-title" class="sr-only">Tableau de bord</h2>
+
+      <!-- État global calculé par l'assistant IA -->
+      <div class="card risk-card">
+        <div id="risk-badge" data-level="normal" role="status" aria-live="polite">Tout va bien</div>
+        <ul id="risk-reasons" class="reasons-list">
+          <li>Aucune anomalie détectée.</li>
+        </ul>
+      </div>
+
+      <!-- Trois cartes de mesures -->
+      <div class="metrics-grid">
+        <div class="card metric">
+          <h3 class="metric-title">Fréquence cardiaque</h3>
+          <p class="metric-line"><span id="hr-value" class="metric-number">--</span> <span class="metric-unit">bpm</span></p>
+        </div>
+        <div class="card metric">
+          <h3 class="metric-title">Respiration</h3>
+          <p class="metric-line"><span id="rr-value" class="metric-number">--</span> <span class="metric-unit">/min</span></p>
+        </div>
+        <div class="card metric">
+          <h3 class="metric-title">Orientation</h3>
+          <!-- Une icône SVG par orientation ; le CSS affiche celle qui correspond à data-orientation -->
+          <div id="orientation-value" data-orientation="dos">
+            <span class="orientation-icon" data-icon="dos">
+              <svg viewBox="0 0 48 48" width="40" height="40" role="img" aria-label="Sur le dos" focusable="false">
+                <circle cx="24" cy="10" r="6" fill="none" stroke="currentColor" stroke-width="3"/>
+                <rect x="14" y="18" width="20" height="24" rx="8" fill="none" stroke="currentColor" stroke-width="3"/>
+                <path d="M19 28h10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="orientation-icon" data-icon="ventre">
+              <svg viewBox="0 0 48 48" width="40" height="40" role="img" aria-label="Sur le ventre" focusable="false">
+                <circle cx="24" cy="10" r="6" fill="currentColor"/>
+                <rect x="14" y="18" width="20" height="24" rx="8" fill="currentColor"/>
+                <path d="M24 24v12" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="orientation-icon" data-icon="cote-gauche">
+              <svg viewBox="0 0 48 48" width="40" height="40" role="img" aria-label="Sur le côté gauche" focusable="false">
+                <circle cx="10" cy="24" r="6" fill="none" stroke="currentColor" stroke-width="3"/>
+                <rect x="18" y="14" width="24" height="20" rx="8" fill="none" stroke="currentColor" stroke-width="3"/>
+                <path d="M6 40l6-6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span class="orientation-icon" data-icon="cote-droit">
+              <svg viewBox="0 0 48 48" width="40" height="40" role="img" aria-label="Sur le côté droit" focusable="false">
+                <circle cx="38" cy="24" r="6" fill="none" stroke="currentColor" stroke-width="3"/>
+                <rect x="6" y="14" width="24" height="20" rx="8" fill="none" stroke="currentColor" stroke-width="3"/>
+                <path d="M42 40l-6-6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span id="orientation-label" class="orientation-label">Sur le dos</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sommeil -->
+      <div class="card">
+        <h3 class="metric-title">Sommeil</h3>
+        <p id="sleep-value" data-sleep="inconnu">Sommeil : en cours d'analyse</p>
+        <!-- Libellés possibles (écrits par le JS) : « Sommeil calme » / « Bébé agité — beaucoup de mouvements » -->
+      </div>
+
+      <!-- Graphiques en direct -->
+      <div class="card">
+        <h3 class="metric-title">ECG en direct</h3>
+        <canvas id="chart-ecg" width="360" height="140" role="img"
+                aria-label="Courbe ECG en direct : en attente de données"></canvas>
+      </div>
+      <div class="card">
+        <h3 class="metric-title">Respiration en direct</h3>
+        <canvas id="chart-resp" width="360" height="140" role="img"
+                aria-label="Courbe de respiration en direct : en attente de données"></canvas>
+      </div>
+
+      <!-- Patch -->
+      <div class="card">
+        <h3 class="metric-title">Patch</h3>
+        <p>Âge de la partie collante : <strong><span id="patch-age">0</span> h</strong></p>
+        <p class="muted small">Pensez à changer la partie collante toutes les 24 h.</p>
+        <button type="button" id="btn-patch-changed" class="btn btn-ghost">J'ai changé la partie collante</button>
+      </div>
+    </section>
+
+    <!-- ===================== ÉCRAN 3 : HISTORIQUE ===================== -->
+    <section id="screen-history" aria-labelledby="history-title" hidden>
+      <h2 id="history-title">Historique</h2>
+
+      <div class="range-row" role="group" aria-label="Période affichée">
+        <button type="button" class="range-btn" data-range="24h" aria-pressed="true">24 h</button>
+        <button type="button" class="range-btn" data-range="7j" aria-pressed="false">7 j</button>
+        <button type="button" class="range-btn" data-range="30j" aria-pressed="false">30 j</button>
+      </div>
+
+      <div class="card">
+        <h3 class="metric-title">Fréquence cardiaque</h3>
+        <canvas id="chart-history-hr" width="360" height="160" role="img"
+                aria-label="Historique de la fréquence cardiaque"></canvas>
+      </div>
+      <div class="card">
+        <h3 class="metric-title">Respiration</h3>
+        <canvas id="chart-history-rr" width="360" height="160" role="img"
+                aria-label="Historique de la respiration"></canvas>
+      </div>
+      <div class="card">
+        <h3 class="metric-title">Niveau de risque</h3>
+        <canvas id="chart-history-risk" width="360" height="160" role="img"
+                aria-label="Historique du niveau de risque"></canvas>
+      </div>
+
+      <div class="card">
+        <h3 class="metric-title">Journal des alertes</h3>
+        <ul id="alert-list" class="alert-list">
+          <li class="empty-message">Aucune alerte pour le moment. C'est une bonne nouvelle.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===================== ÉCRAN 4 : ASSISTANT IA ===================== -->
+    <section id="screen-ai" aria-labelledby="ai-title" hidden>
+      <h2 id="ai-title">Assistant IA</h2>
+
+      <div class="card">
+        <p>L'assistant croise la fréquence cardiaque, la respiration, les mouvements et l'orientation,
+           puis les compare à ce qui est <strong>habituel pour votre bébé</strong>.</p>
+        <p class="muted small">Les limites de sécurité absolues l'emportent toujours sur ce qu'il a appris.</p>
+      </div>
+
+      <div class="card">
+        <h3 class="metric-title">Ce que l'assistant a appris</h3>
+        <dl class="ai-stats">
+          <div><dt>Fréquence cardiaque habituelle</dt><dd><span id="ai-baseline-hr">--</span> bpm</dd></div>
+          <div><dt>Respiration habituelle</dt><dd><span id="ai-baseline-rr">--</span> /min</dd></div>
+          <div><dt>Mesures analysées</dt><dd id="ai-samples">0</dd></div>
+          <div><dt>Confiance</dt><dd id="ai-confidence">Faible (apprentissage en cours)</dd></div>
+        </dl>
+      </div>
+
+      <div class="card">
+        <h3 class="metric-title">Raisons de l'état actuel</h3>
+        <ul id="ai-reasons" class="reasons-list">
+          <li>Aucune anomalie détectée.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===================== ÉCRAN 5 : ALERTES ===================== -->
+    <section id="screen-alerts" aria-labelledby="alerts-title" hidden>
+      <h2 id="alerts-title">Alertes</h2>
+
+      <!-- Réglages rapides (synchronisés par le JS avec ceux de l'écran Réglages) -->
+      <div class="card">
+        <h3 class="metric-title">Réglages rapides</h3>
+        <label class="switch-row" for="quick-sound">
+          <span>Son des alertes</span>
+          <input type="checkbox" id="quick-sound" role="switch">
+        </label>
+        <label class="switch-row" for="quick-vibration">
+          <span>Vibration</span>
+          <input type="checkbox" id="quick-vibration" role="switch">
+        </label>
+        <p class="muted small">Tous les réglages se trouvent dans l'onglet Réglages.</p>
+      </div>
+
+      <div class="card">
+        <h3 class="metric-title">Historique des alertes</h3>
+        <div class="range-row" role="group" aria-label="Filtrer par niveau">
+          <button type="button" class="range-btn alert-filter" data-filter="tous" aria-pressed="true">Toutes</button>
+          <button type="button" class="range-btn alert-filter" data-filter="vigilance" aria-pressed="false">Vigilance</button>
+          <button type="button" class="range-btn alert-filter" data-filter="urgence" aria-pressed="false">Urgence</button>
+        </div>
+        <ul id="alert-list-filtered" class="alert-list">
+          <li class="empty-message">Aucune alerte à afficher.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===================== ÉCRAN 6 : RÉGLAGES ===================== -->
+    <section id="screen-settings" aria-labelledby="settings-title" hidden>
+      <h2 id="settings-title">Réglages</h2>
+
+      <div class="card">
+        <h3 class="metric-title">Alertes</h3>
+        <label class="switch-row" for="setting-sound">
+          <span>Son des alertes</span>
+          <input type="checkbox" id="setting-sound" role="switch" checked>
+        </label>
+        <label class="switch-row" for="setting-vibration">
+          <span>Vibration</span>
+          <input type="checkbox" id="setting-vibration" role="switch" checked>
+        </label>
+        <label class="switch-row" for="setting-notifications">
+          <span>Notifications</span>
+          <input type="checkbox" id="setting-notifications" role="switch">
+        </label>
+        <div class="field">
+          <label for="setting-emergency-number">Numéro d'urgence</label>
+          <input type="tel" id="setting-emergency-number" inputmode="tel" value="190" autocomplete="off">
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="metric-title">Mes données</h3>
+        <p class="muted small">Les données restent sur ce téléphone. Rien n'est envoyé sur Internet.</p>
+        <button type="button" id="btn-export" class="btn btn-ghost">Exporter mes données (JSON)</button>
+        <!-- Le JS demande une confirmation avant d'effacer -->
+        <button type="button" id="btn-reset-data" class="btn btn-danger">Effacer toutes les données</button>
+      </div>
+
+      <div class="card">
+        <h3 class="metric-title">À propos</h3>
+        <p>NeoGuard : version de démonstration.</p>
+        <p class="warning-note"><strong>Avertissement médical :</strong> NeoGuard est une aide à la surveillance.
+           Il ne remplace ni votre vigilance parentale  ni le suivi médical.
+           Les seuils utilisés sont des valeurs de départ, à faire valider par un pédiatre.
+           En cas de doute sur la santé de votre enfant, appelez les secours.</p>
+      </div>
+    </section>
+
+    <!-- ===================== ÉCRAN 7 : MODE DÉMO ===================== -->
+    <section id="screen-demo" aria-labelledby="demo-title" hidden>
+      <h2 id="demo-title">Mode test</h2>
+      <p class="card"><strong>Test simulé : rien n'est enregistré et aucune mesure réelle n'est effectuée.</strong>
+        Changez un paramètre et observez les mesures simulées, les graphiques, le niveau calculé et les alertes de test.</p>
+      <div id="demo-panel">
+
+        <!-- a) Sliders -->
+        <fieldset class="card demo-group">
+          <legend>Mesures simulées</legend>
+
+          <div class="field">
+            <label for="demo-hr">Fréquence cardiaque : <output id="demo-hr-out" for="demo-hr">120</output> bpm</label>
+            <input type="range" id="demo-hr" min="40" max="220" value="120" step="1">
+            <p id="demo-hr-hint" class="muted small" data-zone="normal">Repère : normal</p>
+          </div>
+
+          <div class="field">
+            <label for="demo-rr">Respiration : <output id="demo-rr-out" for="demo-rr">40</output> /min</label>
+            <input type="range" id="demo-rr" min="0" max="90" value="40" step="1">
+            <p id="demo-rr-hint" class="muted small" data-zone="normal">Repère : normal</p>
+          </div>
+
+          <div class="field">
+            <label for="demo-motion">Mouvement : <output id="demo-motion-out" for="demo-motion">20</output> %</label>
+            <input type="range" id="demo-motion" min="0" max="100" value="20" step="1">
+            <p id="demo-motion-hint" class="muted small" data-zone="normal">Repère : normal</p>
+          </div>
+        </fieldset>
+
+        <!-- b) Orientation -->
+        <fieldset class="card demo-group">
+          <legend>Orientation</legend>
+          <div class="radio-row">
+            <label class="radio-pill"><input type="radio" name="demo-orientation" value="dos" checked> <span>Dos</span></label>
+            <label class="radio-pill"><input type="radio" name="demo-orientation" value="ventre"> <span>Ventre</span></label>
+            <label class="radio-pill"><input type="radio" name="demo-orientation" value="cote-gauche"> <span>Côté gauche</span></label>
+            <label class="radio-pill"><input type="radio" name="demo-orientation" value="cote-droit"> <span>Côté droit</span></label>
+          </div>
+        </fieldset>
+
+        <!-- c) Patch -->
+        <fieldset class="card demo-group">
+          <legend>Patch</legend>
+          <label class="switch-row" for="demo-patch-connected">
+            <span>Patch connecté</span>
+            <input type="checkbox" id="demo-patch-connected" role="switch" checked>
+          </label>
+          <div class="field">
+            <label for="demo-patch-hours">Âge du patch : <output id="demo-patch-hours-out" for="demo-patch-hours">2</output> h</label>
+            <input type="range" id="demo-patch-hours" min="0" max="30" value="2" step="1">
+          </div>
+        </fieldset>
+
+        <!-- d) Scénarios prêts à l'emploi -->
+        <fieldset class="card demo-group">
+          <legend>Scénarios prêts à l'emploi</legend>
+          <div class="scenario-grid">
+            <button type="button" class="btn btn-ghost" data-scenario="normal">Tout va bien</button>
+            <button type="button" class="btn btn-ghost" data-scenario="sommeil-agite">Sommeil agité</button>
+            <button type="button" class="btn btn-ghost" data-scenario="vigilance-tachycardie">Vigilance : cœur rapide</button>
+            <button type="button" class="btn btn-ghost" data-scenario="vigilance-respiration-rapide">Vigilance : respiration rapide</button>
+            <button type="button" class="btn btn-danger" data-scenario="apnee-urgence">Urgence : pause respiratoire</button>
+            <button type="button" class="btn btn-danger" data-scenario="bradycardie-urgence">Urgence : bradycardie</button>
+            <button type="button" class="btn btn-danger" data-scenario="ventre-urgence">Urgence : sur le ventre</button>
+            <button type="button" class="btn btn-ghost" data-scenario="patch-deconnecte">Patch déconnecté</button>
+            <button type="button" class="btn btn-ghost" data-scenario="rappel-24h">Rappel des 24 h</button>
+          </div>
+        </fieldset>
+
+        <!-- e) Résultat en direct -->
+        <div class="card demo-group">
+          <h3 class="metric-title">Résultat en direct</h3>
+          <!-- Mini badge dupliqué : identifié par data-role (pas d'id dupliqué) -->
+          <div class="demo-risk-badge" data-role="demo-risk" data-level="normal" role="status" aria-live="polite">Tout va bien</div>
+          <p class="metric-title">Pourquoi cet état ?</p>
+          <p id="demo-explain" aria-live="polite">Modifiez un paramètre pour voir l'explication.</p>
+          <h4 class="metric-title">Journal du test</h4>
+          <ol id="demo-log" class="demo-log" aria-live="polite"></ol>
+        </div>
+
+        <!-- f) Actions -->
+        <div class="demo-actions">
+          <button type="button" id="demo-reset" class="btn btn-ghost">Réinitialiser le test</button>
+          <button type="button" id="demo-exit" class="btn btn-primary">Quitter le mode test</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== NAVIGATION BASSE ===================== -->
+  <nav id="bottom-nav" aria-label="Navigation principale" hidden>
+    <button type="button" data-target="dashboard" aria-current="page">Suivi</button>
+    <button type="button" data-target="history">Historique</button>
+    <button type="button" data-target="ai">Assistant</button>
+    <button type="button" data-target="alerts">Alertes</button>
+    <button type="button" data-target="settings">Réglages</button>
+    <button type="button" data-target="demo">Test</button>
+  </nav>
+
+  <!-- ===================== OVERLAY D'URGENCE ===================== -->
+  <!-- Plein écran rouge, caché par défaut. Deux boutons seulement. -->
+  <div id="emergency-overlay" role="alertdialog" aria-modal="true" aria-live="assertive"
+       aria-labelledby="emergency-title" aria-describedby="emergency-detail" hidden>
+    <div class="emergency-content">
+      <h2 id="emergency-title">URGENCE</h2>
+      <p id="emergency-detail">Anomalie détectée.</p>
+      <button type="button" id="btn-ok-intervened" class="btn btn-primary">Ça va, j'ai pu intervenir</button>
+      <!--
+        Pourquoi un lien tel: et pas WhatsApp ? WhatsApp ne peut pas joindre le 190 (numéro d'urgence).
+        Un lien tel: ouvre le composeur du téléphone avec le numéro déjà saisi :
+        il ne reste qu'à appuyer sur « appeler ». Le JS met à jour le href
+        à partir du réglage #setting-emergency-number.
+      -->
+      <a id="btn-call-samu" class="btn btn-danger" href="tel:190">Appeler le SAMU (190)</a>
+    </div>
+  </div>
+
+  <!-- ===================== TOASTS ===================== -->
+  <div id="vigilance-toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <div id="reminder-toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- Scripts en fin de body (aucun script inline) -->
+  <script type="module" src="main.js"></script>
+</body>
+</html>
